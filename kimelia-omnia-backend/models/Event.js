@@ -64,7 +64,7 @@ const mongoose = require('mongoose');
  *           items:
  *             type: string
  *             format: email
- *           description: A list of email addresses of attendees for the event. (Future: link to User IDs)
+ *           description: A list of email addresses of attendees.
  *           example: [jane.doe@example.com, alice.smith@example.com]
  *         reminders:
  *           type: array
@@ -136,7 +136,7 @@ const eventSchema = new mongoose.Schema(
     },
     attendees: [
       {
-        type: String, // Store as emails initially, could later link to User IDs
+        type: String,
         match: [
           /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-1]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/,
           'Please enter valid attendee email address(es)',
@@ -166,17 +166,10 @@ eventSchema.pre('save', function(next) {
 
 eventSchema.pre('findOneAndUpdate', function(next) {
   const update = this.getUpdate();
-  if (update.startTime && update.endTime && update.startTime >= update.endTime) {
-    next(new Error('End time must be after start time.'));
-  } else if (update.startTime && !update.endTime) { // If only start time is updated, ensure it's still before original end time
-      // This is more complex as it needs to access the original document.
-      // For simple checks, it's often done client-side or in the controller.
-      // For robust server-side, you might need to fetch the original doc first.
-      next(); // Simplification for now, rely on client or more complex pre-hook.
-  } else if (update.endTime && !update.startTime) { // If only end time is updated
-      next();
-  }
-  else {
+  // Simplified check for findOneAndUpdate, client-side validation highly recommended for complex date logic
+  if (update.startTime && update.endTime && new Date(update.startTime) >= new Date(update.endTime)) {
+    next(new Error('Updated end time must be after updated start time.'));
+  } else {
     next();
   }
 });

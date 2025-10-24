@@ -2,7 +2,7 @@ const express = require('express');
 const {
   registerUser,
   loginUser,
-  verifyEmail, // Import the new controller
+  verifyEmail,
   getUserProfile,
   updateUserProfile,
 } = require('../controllers/authController');
@@ -21,7 +21,7 @@ const router = express.Router();
  * /auth/register:
  *   post:
  *     summary: Register a new user account and send a verification email.
- *     description: Creates a new user with a specified name, email, password, and an optional role. A verification email is sent to the provided email address, and the user must verify before logging in.
+ *     description: Creates a new user with a specified name, email, password, and an optional role. A verification email is sent to the provided email address, and the user must verify their email before they can log in.
  *     tags: [Authentication]
  *     requestBody:
  *       required: true
@@ -67,10 +67,10 @@ const router = express.Router();
  *                 message:
  *                   type: string
  *                   example: User registered successfully! A verification email has been sent to jane.doe@example.com. Please verify your email to log in.
- *                 _id: { type: 'string' }
- *                 name: { type: 'string' }
- *                 email: { type: 'string' }
- *                 role: { type: 'string' }
+ *                 _id: { type: 'string', example: '60d0fe4f5b5f7e001c0d3a7b' }
+ *                 name: { type: 'string', example: 'Jane Doe' }
+ *                 email: { type: 'string', example: 'jane.doe@example.com' }
+ *                 role: { type: 'string', example: 'individual' }
  *                 isVerified: { type: 'boolean', example: false }
  *       400:
  *         $ref: '#/components/responses/BadRequestError'
@@ -112,9 +112,9 @@ router.post('/register', registerUser);
  *                 message:
  *                   type: string
  *                   example: Email verified successfully! You can now log in.
- *                 _id: { type: 'string' }
- *                 name: { type: 'string' }
- *                 email: { type: 'string' }
+ *                 _id: { type: 'string', example: '60d0fe4f5b5f7e001c0d3a7b' }
+ *                 name: { type: 'string', example: 'John Doe' }
+ *                 email: { type: 'string', example: 'john.doe@example.com' }
  *                 isVerified: { type: 'boolean', example: true }
  *       400:
  *         description: Invalid or expired token, or token is missing.
@@ -122,6 +122,15 @@ router.post('/register', registerUser);
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
+ *             examples:
+ *               missingToken:
+ *                 value:
+ *                   message: Verification token is missing.
+ *                   statusCode: 400
+ *               invalidOrExpiredToken:
+ *                 value:
+ *                   message: Invalid or expired verification token. Please try registering again or request a new verification email.
+ *                   statusCode: 400
  *       500:
  *         $ref: '#/components/responses/ServerError'
  */
@@ -165,15 +174,20 @@ router.post('/verify-email', verifyEmail);
  *       400:
  *         $ref: '#/components/responses/BadRequestError'
  *       401:
- *         description: Unauthorized: Invalid credentials or unverified email.
+ *         description: Unauthorized.
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: Your email address is not verified. Please check your inbox for a verification email or request a new one.
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             examples:
+ *               invalidCredentials:
+ *                 value:
+ *                   message: Invalid credentials. Please check your email and password.
+ *                   statusCode: 401
+ *               emailNotVerified:
+ *                 value:
+ *                   message: Your email address is not verified. Please check your inbox for a verification email or request a new one.
+ *                   statusCode: 401
  *       500:
  *         $ref: '#/components/responses/ServerError'
  */
@@ -246,7 +260,7 @@ router.post('/login', loginUser);
  *                 example: NewSecurePass123
  *               role:
  *                 type: string
- *                 enum: [individual, student, startup]
+ *                 enum: [individual, student, startup] # Admin role cannot be set via this route for security
  *                 description: New role for the user (only 'individual', 'student', 'startup' allowed).
  *                 example: student
  *               settings:
@@ -266,11 +280,17 @@ router.post('/login', loginUser);
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/AuthResponse'
+ *               type: object
  *               properties:
  *                 message:
  *                   type: string
- *                   example: Profile updated successfully! If email was changed, a new verification email has been sent.
+ *                   example: Profile updated successfully! If email was changed, a new verification email has been sent to new.email@example.com. Please verify your new email address.
+ *                 _id: { type: 'string' }
+ *                 name: { type: 'string' }
+ *                 email: { type: 'string' }
+ *                 role: { type: 'string' }
+ *                 isVerified: { type: 'boolean' }
+ *                 token: { type: 'string' }
  *       400:
  *         $ref: '#/components/responses/BadRequestError'
  *       401:
@@ -292,7 +312,7 @@ router.route('/profile').get(protect, getUserProfile).put(protect, updateUserPro
  *     description: Retrieves data accessible only by users with the 'admin' role. Demonstrates role-based access control.
  *     tags: [Authentication]
  *     security:
-     *       - bearerAuth: []
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Admin data retrieved successfully.
@@ -314,6 +334,7 @@ router.route('/profile').get(protect, getUserProfile).put(protect, updateUserPro
  *         $ref: '#/components/responses/ServerError'
  */
 router.get('/admin-data', protect, authorizeRoles('admin'), (req, res) => {
+    // In a real application, this would fetch and return actual sensitive admin data
     res.json({
         message: `Welcome, Admin ${req.user.name}! Here is your secret data.`,
         user: req.user
