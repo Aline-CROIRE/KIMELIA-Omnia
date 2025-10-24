@@ -1,0 +1,77 @@
+# =========================
+# Node.js / Backend Project
+# =========================
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Dependency directories
+node_modules/
+jspm_packages/
+
+# Build outputs
+dist/
+build/
+coverage/
+.next/
+out/
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Editor and IDE folders
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# TypeScript build files
+*.tsbuildinfo
+
+# Cache
+.cache/
+.parcel-cache/
+.eslintcache
+.stylelintcache
+
+# Misc
+*.pid
+*.seed
+*.pid.lock
+
+# Debug and test output
+debug/
+npm-debug.log
+yarn-error.log
+
+# Optional npm cache directory
+.npm/
+
+# Optional eslint cache
+.eslintcache
+
+# =========================
+# Custom Project Files
+# =========================
+# Ignore backend env file specifically
+kimelia-omnia-backend/.env
