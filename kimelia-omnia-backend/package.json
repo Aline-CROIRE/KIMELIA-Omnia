@@ -1,31 +1,33 @@
 {
   "name": "kimelia-omnia-backend",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Backend for KIMELIA Omnia AI-driven productivity platform",
+  "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "concurrently \"nodemon server.js\" \"npm run open:swagger\"",
-    "open:swagger": "sleep 5 && open-cli http://localhost:5000/api-docs",
+    "open:swagger": "wait-on http://localhost:5000/api-docs && open-cli http://localhost:5000/api-docs",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
-  "author": "",
+  "author": "KIMELIA Soft",
   "license": "ISC",
   "dependencies": {
-    "@sendgrid/mail": "^8.1.6",
-    "bcryptjs": "^3.0.2",
+    "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
-    "dotenv": "^17.2.3",
-    "express": "^5.1.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
     "jsonwebtoken": "^9.0.2",
-    "mongoose": "^8.19.2"
+    "mongoose": "^8.4.1",
+    "openai": "^4.47.1",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.0",
+    "@sendgrid/mail": "^8.1.3"
   },
   "devDependencies": {
-    "concurrently": "^9.2.1",
-    "nodemon": "^3.1.10",
-    "open-cli": "^8.0.0",
-    "swagger-jsdoc": "^6.2.8",
-    "swagger-ui-express": "^5.0.1"
+    "concurrently": "^8.2.2",
+    "nodemon": "^3.1.2",
+    "open-cli": "^7.0.1",
+    "wait-on": "^7.2.0"
   }
 }
