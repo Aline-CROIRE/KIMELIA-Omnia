@@ -5,6 +5,8 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+// --- AI-Powered Text Operations ---
+
 /**
  * @function summarizeText
  * @description Uses AI to summarize a given block of text.
@@ -17,19 +19,19 @@ const summarizeText = async (text, promptPrefix = 'Summarize the following text 
   if (!process.env.OPENAI_API_KEY) {
     throw new Error('OpenAI API Key is not configured in environment variables.');
   }
-  if (!text || text.length < 50) { // Basic check for sufficient text
+  if (!text || text.length < 50) {
     throw new Error('Input text must be at least 50 characters for effective summarization.');
   }
 
   try {
     const completion = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo", // Or "gpt-4" for higher quality and cost
+      model: "gpt-3.5-turbo",
       messages: [
         { role: "system", content: "You are a helpful assistant that excels at summarizing text concisely and accurately." },
         { role: "user", content: `${promptPrefix}\n\nText to summarize:\n${text}` },
       ],
-      max_tokens: 150, // Max length of the summary in tokens
-      temperature: 0.5, // Less creative, more factual for summarization
+      max_tokens: 150,
+      temperature: 0.5,
     });
 
     return completion.choices[0].message.content.trim();
@@ -68,13 +70,13 @@ const draftMessage = async (instruction, context = '', tone = 'professional', fo
 
   try {
     const completion = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo", // Or "gpt-4" for higher quality and cost
+      model: "gpt-3.5-turbo",
       messages: [
         { role: "system", content: "You are a helpful assistant that drafts clear, concise, and appropriate messages." },
         { role: "user", content: userPrompt },
       ],
-      max_tokens: 300, // Max length of the draft in tokens
-      temperature: 0.7, // More creative for drafting
+      max_tokens: 300,
+      temperature: 0.7,
     });
 
     return completion.choices[0].message.content.trim();
@@ -87,7 +89,42 @@ const draftMessage = async (instruction, context = '', tone = 'professional', fo
   }
 };
 
+// --- AI-Powered Motivation / Tips (can be enhanced with personalization from user data) ---
+
+const motivationalTips = [
+  "The best way to predict the future is to create it.",
+  "Your only limit is your mind.",
+  "Success is not final, failure is not fatal: it is the courage to continue that counts.",
+  "Believe you can and you're halfway there.",
+  "The expert in anything was once a beginner.",
+  "Don't watch the clock; do what it does. Keep going.",
+  "Small daily improvements are the key to staggering long-term results.",
+  "Start where you are. Use what you have. Do what you can.",
+  "The mind is everything. What you think you become.",
+  "The future belongs to those who believe in the beauty of their dreams."
+];
+
+/**
+ * @function getMotivationalTip
+ * @description Provides a motivational tip.
+ * @param {string} userId - The ID of the user (for future personalization based on goals/progress).
+ * @returns {Promise<string>} - A motivational tip.
+ */
+const getMotivationalTip = async (userId) => {
+  // In a more advanced version:
+  // 1. Fetch user's active goals, progress, upcoming deadlines from the database using userId
+  // 2. Craft a prompt for OpenAI based on this data:
+  //    e.g., `Based on the user's goal "Learn Node.js" with 50% progress,
+  //          and target date in 2 months, give a short, encouraging motivational tip.`
+  // 3. Call OpenAI chat completions with this personalized prompt.
+  // For now, return a random static tip.
+  const randomIndex = Math.floor(Math.random() * motivationalTips.length);
+  return motivationalTips[randomIndex];
+};
+
+
 module.exports = {
   summarizeText,
   draftMessage,
+  getMotivationalTip, // Export the new function
 };
