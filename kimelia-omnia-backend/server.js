@@ -97,11 +97,11 @@ app.get('/', (req, res) => {
   res.send('<h1>KIMELIA Omnia API is running!</h1><p>Visit <a href="/api-docs">/api-docs</a> for API documentation.</p>');
 });
 
-// --- Route Imports (All API routes will be prefixed with /api/v1) ---
-// User Authentication & Profile
-app.use('/api/v1/auth', require('./routes/authRoutes'));
 
-// --- Centralized Error Handling Middleware (MUST be placed LAST) ---
+app.use('/api/v1/auth', require('./routes/authRoutes'));
+app.use('/api/v1/tasks', require('./routes/taskRoutes')); 
+app.use('/api/v1/events', require('./routes/eventRoutes'));
+
 app.use(errorHandler);
 
 // --- Start Server ---
