@@ -5,9 +5,15 @@ const {
   createWellnessRecord,
   updateWellnessRecord,
   deleteWellnessRecord,
-  getWellnessSuggestionController, // Import the new controller
+  getWellnessSuggestionController,
 } = require('../controllers/wellnessController');
 const { protect } = require('../middleware/authMiddleware');
+const {
+    validateId, // For record ID in params
+    validateCreateWellnessRecord,
+    validateUpdateWellnessRecord,
+    validateWellnessSuggestion
+} = require('../middleware/validationMiddleware');
 const router = express.Router();
 
 /**
@@ -114,7 +120,9 @@ router.use(protect);
  *       500:
  *         $ref: '#/components/responses/ServerError'
  */
-router.route('/wellness-records').get(getWellnessRecords).post(createWellnessRecord);
+router.route('/wellness-records')
+    .get(getWellnessRecords)
+    .post(validateCreateWellnessRecord, createWellnessRecord);
 
 /**
  * @swagger
@@ -231,14 +239,17 @@ router.route('/wellness-records').get(getWellnessRecords).post(createWellnessRec
  *       500:
  *         $ref: '#/components/responses/ServerError'
  */
-router.route('/wellness-records/:id').get(getWellnessRecord).put(updateWellnessRecord).delete(deleteWellnessRecord);
+router.route('/wellness-records/:id')
+    .get(validateId, getWellnessRecord)
+    .put(validateId, validateUpdateWellnessRecord, updateWellnessRecord)
+    .delete(validateId, deleteWellnessRecord);
 
 /**
  * @swagger
  * /wellness/suggest:
  *   post:
  *     summary: Get AI-driven wellness suggestions.
- *     description: Generates personalized wellness suggestions (e.g., break, meal, exercise, mindfulness) based on the user's current context and activity.
+ *     description: Generates personalized wellness suggestions (e.g., break, meal, exercise, mindfulness) based on the user's current context and activity, leveraging AI.
  *     tags: [Wellness (Omnia Wellness)]
  *     security:
  *       - bearerAuth: []
@@ -280,6 +291,6 @@ router.route('/wellness-records/:id').get(getWellnessRecord).put(updateWellnessR
  *       500:
  *         $ref: '#/components/responses/ServerError'
  */
-router.post('/wellness/suggest', getWellnessSuggestionController);
+router.post('/wellness/suggest', validateWellnessSuggestion, getWellnessSuggestionController);
 
 module.exports = router;

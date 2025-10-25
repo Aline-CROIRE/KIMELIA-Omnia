@@ -1,3 +1,4 @@
+
 const express = require('express');
 const {
   getLearningResources,
@@ -5,9 +6,14 @@ const {
   createLearningResource,
   updateLearningResource,
   deleteLearningResource,
-  getMotivationalTipController, // Import the motivational tip controller
+  getMotivationalTipController,
 } = require('../controllers/learningResourceController');
 const { protect } = require('../middleware/authMiddleware');
+const {
+    validateId, // For resource ID in params
+    validateCreateLearningResource,
+    validateUpdateLearningResource
+} = require('../middleware/validationMiddleware');
 const router = express.Router();
 
 /**
@@ -100,12 +106,12 @@ router.use(protect);
  *             required: [title, url, type]
  *             properties:
  *               title: { type: string, minLength: 5, maxLength: 300, example: "Advanced CSS Grid Layout" }
- *               description: { type: string, maxLength: 1000, example: "A comprehensive guide to mastering CSS Grid for responsive design." }
+ *               description: { type: string, maxLength: 1000, example: "In-depth guide covering responsive design with CSS Grid." }
  *               url: { type: string, format: "url", example: "https://css-tricks.com/snippets/css/a-guide-to-css-grid/" }
  *               type: { type: string, enum: [article, video, course, book, podcast, tool, other], example: "article" }
  *               category: { type: string, enum: [programming, marketing, finance, design, self-improvement, other], example: "design" }
  *               tags: { type: array, items: { type: string }, example: ["css", "frontend", "responsive"] }
- *               relatedGoal: { type: string, example: "60d0fe4f5b5f7e001c0d3a81" }
+ *               relatedGoal: { type: string, description: "Optional ID of a goal this resource helps with.", example: "60d0fe4f5b5f7e001c0d3a81" }
  *               source: { type: string, enum: [manual, AI_suggested, web_scrape, imported], example: "manual" }
  *     responses:
  *       201:
@@ -126,7 +132,9 @@ router.use(protect);
  *       500:
  *         $ref: '#/components/responses/ServerError'
  */
-router.route('/').get(getLearningResources).post(createLearningResource);
+router.route('/learning-resources')
+    .get(getLearningResources)
+    .post(validateCreateLearningResource, createLearningResource);
 
 /**
  * @swagger
@@ -189,7 +197,7 @@ router.route('/').get(getLearningResources).post(createLearningResource);
  *               type: { type: string, enum: [article, video, course, book, podcast, tool, other], example: "video" }
  *               category: { type: string, enum: [programming, marketing, finance, design, self-improvement, other], example: "programming" }
  *               tags: { type: array, items: { type: string }, example: ["css", "advanced", "tutorial"] }
- *               relatedGoal: { type: string, example: "60d0fe4f5b5f7e001c0d3a81" }
+ *               relatedGoal: { type: string, description: "Optional ID of a goal this resource helps with.", example: "60d0fe4f5b5f7e001c0d3a81" }
  *               source: { type: string, enum: [manual, AI_suggested, web_scrape, imported], example: "manual" }
  *     responses:
  *       200:
@@ -242,14 +250,17 @@ router.route('/').get(getLearningResources).post(createLearningResource);
  *       500:
  *         $ref: '#/components/responses/ServerError'
  */
-router.route('/:id').get(getLearningResource).put(updateLearningResource).delete(deleteLearningResource);
+router.route('/learning-resources/:id')
+    .get(validateId, getLearningResource)
+    .put(validateId, validateUpdateLearningResource, updateLearningResource)
+    .delete(validateId, deleteLearningResource);
 
 /**
  * @swagger
  * /coach/motivational-tip:
  *   get:
  *     summary: Get a motivational tip.
- *     description: Retrieves a motivational tip to inspire and encourage users. Future versions may provide AI-generated, personalized tips.
+ *     description: Retrieves a motivational tip to inspire and encourage users. Leveraging AI for personalized tips based on user context.
  *     tags: [Learning Resources (Omnia Coach)]
  *     security:
  *       - bearerAuth: []
@@ -265,8 +276,8 @@ router.route('/:id').get(getLearningResource).put(updateLearningResource).delete
  *                 data:
  *                   type: object
  *                   properties:
- *                     tip: { type: string, example: "Believe you can and you're halfway there." }
- *                     source: { type: string, example: "Omnia Coach" }
+ *                     tip: { type: string, example: "Believe you can and you're halfway there. Keep pushing towards your goals!" }
+ *                     source: { type: string, example: "Omnia Coach AI" }
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
  *       500:

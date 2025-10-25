@@ -1,3 +1,4 @@
+
 const express = require('express');
 const {
   getExpenses,
@@ -7,6 +8,11 @@ const {
   deleteExpense,
 } = require('../controllers/expenseController');
 const { protect } = require('../middleware/authMiddleware');
+const {
+    validateId, // For expense ID in params
+    validateCreateExpense,
+    validateUpdateExpense
+} = require('../middleware/validationMiddleware');
 const router = express.Router();
 
 /**
@@ -125,7 +131,9 @@ router.use(protect);
  *       500:
  *         $ref: '#/components/responses/ServerError'
  */
-router.route('/').get(getExpenses).post(createExpense);
+router.route('/')
+    .get(getExpenses)
+    .post(validateCreateExpense, createExpense);
 
 /**
  * @swagger
@@ -240,6 +248,9 @@ router.route('/').get(getExpenses).post(createExpense);
  *       500:
  *         $ref: '#/components/responses/ServerError'
  */
-router.route('/:id').get(getExpense).put(updateExpense).delete(deleteExpense);
+router.route('/:id')
+    .get(validateId, getExpense)
+    .put(validateId, validateUpdateExpense, updateExpense)
+    .delete(validateId, deleteExpense);
 
 module.exports = router;

@@ -61,7 +61,7 @@ const mongoose = require('mongoose');
  *           type: string
  *           description: Optional ID of the project this task is part of (References Project Model).
  *           nullable: true
- *           example: 60d0fe4f5b5f7e001c0d3a83 # Updated example to project ID
+ *           example: 60d0fe4f5b5f7e001c0d3a83
  *         assignedTo:
  *           type: string
  *           description: Optional ID of another user this task is assigned to (for team environments).
@@ -79,9 +79,13 @@ const mongoose = require('mongoose');
  *                 example: 2024-12-30T09:00:00.000Z
  *               method:
  *                 type: string
- *                 enum: [email, app_notification]
+ *                 enum: [email, app_notification, sms] # Added sms
  *                 description: Method of notification.
  *                 example: app_notification
+ *               isSent:
+ *                 type: boolean
+ *                 default: false
+ *                 description: Flag to indicate if this specific reminder has been sent.
  *           description: A list of reminder objects for the task.
  *         createdAt:
  *           type: string
@@ -132,7 +136,7 @@ const taskSchema = new mongoose.Schema(
         trim: true,
       },
     ],
-    project: { // Added this field
+    project: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Project',
     },
@@ -143,7 +147,8 @@ const taskSchema = new mongoose.Schema(
     reminders: [
       {
         time: { type: Date, required: true },
-        method: { type: String, enum: ['email', 'app_notification'], default: 'app_notification' },
+        method: { type: String, enum: ['email', 'app_notification', 'sms'], default: 'app_notification' }, // Added sms
+        isSent: { type: Boolean, default: false } // New field to track if reminder was sent
       }
     ],
   },
@@ -153,4 +158,3 @@ const taskSchema = new mongoose.Schema(
 );
 
 module.exports = mongoose.model('Task', taskSchema);
-

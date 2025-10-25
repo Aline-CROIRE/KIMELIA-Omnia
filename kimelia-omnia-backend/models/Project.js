@@ -58,24 +58,24 @@ const mongoose = require('mongoose');
  *           example: high
  *         members:
  *           type: array
+ *           description: A list of User IDs of team members collaborating on this project.
  *           items:
  *             type: string
  *             description: User ID of a project member.
  *             example: 60d0fe4f5b5f7e001c0d3a7e
- *           description: A list of User IDs of team members collaborating on this project.
  *         tags:
  *           type: array
+ *           description: Optional tags for categorization (e.g., marketing, product, internal).
  *           items:
  *             type: string
- *           description: Optional tags for categorization (e.g., marketing, product, internal).
- *           example: [marketing, product, launch]
+ *             example: "marketing"
  *         files:
  *           type: array
+ *           description: A list of IDs representing files associated with the project.
  *           items:
  *             type: string
- *             description: IDs of associated files. (Future: link to a File Management module)
- *             example: ["file_id_1", "file_id_2"]
- *           description: A list of IDs representing files associated with the project.
+ *             description: ID of an associated file.
+ *             example: "file_id_1"
  *         createdAt:
  *           type: string
  *           format: date-time
@@ -122,7 +122,7 @@ const projectSchema = new mongoose.Schema(
       enum: ['low', 'medium', 'high', 'urgent'],
       default: 'medium',
     },
-    members: [ // Users collaborating on this project
+    members: [
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
@@ -134,9 +134,9 @@ const projectSchema = new mongoose.Schema(
         trim: true,
       },
     ],
-    files: [ // For future file management integration
+    files: [
       {
-        type: String, // Will store file IDs
+        type: String,
       }
     ]
   },
@@ -148,7 +148,7 @@ const projectSchema = new mongoose.Schema(
 // Pre-save hook to ensure owner is always a member
 projectSchema.pre('save', function(next) {
   if (this.owner && !this.members.includes(this.owner)) {
-    this.members.unshift(this.owner); // Add owner as first member if not already there
+    this.members.unshift(this.owner);
   }
   next();
 });

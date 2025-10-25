@@ -1,3 +1,4 @@
+
 const express = require('express');
 const {
   getGoals,
@@ -7,6 +8,11 @@ const {
   deleteGoal,
 } = require('../controllers/goalController');
 const { protect } = require('../middleware/authMiddleware');
+const {
+    validateId, // For goal ID in params
+    validateCreateGoal,
+    validateUpdateGoal
+} = require('../middleware/validationMiddleware');
 const router = express.Router();
 
 /**
@@ -117,7 +123,9 @@ router.use(protect);
  *       500:
  *         $ref: '#/components/responses/ServerError'
  */
-router.route('/').get(getGoals).post(createGoal);
+router.route('/')
+    .get(getGoals)
+    .post(validateCreateGoal, createGoal);
 
 /**
  * @swagger
@@ -239,6 +247,9 @@ router.route('/').get(getGoals).post(createGoal);
  *       500:
  *         $ref: '#/components/responses/ServerError'
  */
-router.route('/:id').get(getGoal).put(updateGoal).delete(deleteGoal);
+router.route('/:id')
+    .get(validateId, getGoal)
+    .put(validateId, validateUpdateGoal, updateGoal)
+    .delete(validateId, deleteGoal);
 
 module.exports = router;
