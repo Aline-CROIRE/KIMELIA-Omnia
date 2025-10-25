@@ -122,7 +122,9 @@ app.use('/api/v1', require('./routes/learningResourceRoutes'));
 app.use('/api/v1/projects', require('./routes/projectRoutes'));
 app.use('/api/v1/expenses', require('./routes/expenseRoutes')); 
 app.use('/api/v1/budgets', require('./routes/budgetRoutes'));
+app.use('/api/v1', require('./routes/insightRoutes'));
 
+// --- Error Handling Middleware ---
 app.use(errorHandler);
 
 // --- Start Server ---

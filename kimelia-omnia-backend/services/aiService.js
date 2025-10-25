@@ -25,13 +25,13 @@ const summarizeText = async (text, promptPrefix = 'Summarize the following text 
 
   try {
     const completion = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
+      model: "gpt-3.5-turbo", // Or "gpt-4" for higher quality and cost
       messages: [
         { role: "system", content: "You are a helpful assistant that excels at summarizing text concisely and accurately." },
         { role: "user", content: `${promptPrefix}\n\nText to summarize:\n${text}` },
       ],
-      max_tokens: 150,
-      temperature: 0.5,
+      max_tokens: 150, // Max length of the summary in tokens
+      temperature: 0.5, // Less creative, more factual for summarization
     });
 
     return completion.choices[0].message.content.trim();
@@ -89,7 +89,7 @@ const draftMessage = async (instruction, context = '', tone = 'professional', fo
   }
 };
 
-// --- AI-Powered Motivation / Tips (can be enhanced with personalization from user data) ---
+// --- AI-Powered Motivation / Tips ---
 
 const motivationalTips = [
   "The best way to predict the future is to create it.",
@@ -111,20 +111,103 @@ const motivationalTips = [
  * @returns {Promise<string>} - A motivational tip.
  */
 const getMotivationalTip = async (userId) => {
-  // In a more advanced version:
-  // 1. Fetch user's active goals, progress, upcoming deadlines from the database using userId
-  // 2. Craft a prompt for OpenAI based on this data:
-  //    e.g., `Based on the user's goal "Learn Node.js" with 50% progress,
-  //          and target date in 2 months, give a short, encouraging motivational tip.`
-  // 3. Call OpenAI chat completions with this personalized prompt.
+  // Enhanced to potentially use AI with user context in the future
   // For now, return a random static tip.
   const randomIndex = Math.floor(Math.random() * motivationalTips.length);
   return motivationalTips[randomIndex];
+};
+
+// --- New AI Functions for Omnia Insights ---
+
+/**
+ * @function getPersonalizedProductivityRecommendation
+ * @description Generates AI-driven productivity recommendations based on user activity summary.
+ * @param {Object} userDataSummary - An object summarizing user's tasks, events, and their status.
+ * @returns {Promise<string>} - A string containing personalized productivity recommendations.
+ * @throws {Error} If the OpenAI API call fails or API key is missing.
+ */
+const getPersonalizedProductivityRecommendation = async (userDataSummary) => {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error('OpenAI API Key is not configured for productivity recommendations.');
+  }
+  if (!userDataSummary || typeof userDataSummary !== 'object' || Object.keys(userDataSummary).length === 0) {
+    throw new Error('User data summary is required for personalized productivity recommendations.');
+  }
+
+  const prompt = `Based on the following user activity summary, provide actionable and encouraging productivity recommendations to help them optimize their day and achieve more. Focus on improvements, time management, and habit formation.
+
+  User Activity Summary:
+  ${JSON.stringify(userDataSummary, null, 2)}
+
+  Recommendations:`;
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo", // Consider gpt-4 for more nuanced advice
+      messages: [
+        { role: "system", content: "You are an AI productivity coach providing intelligent, empathetic, and actionable advice." },
+        { role: "user", content: prompt },
+      ],
+      max_tokens: 250,
+      temperature: 0.7,
+    });
+    return completion.choices[0].message.content.trim();
+  } catch (error) {
+    console.error('Error getting productivity recommendations from OpenAI:', error.message);
+    if (error.response && error.response.data && error.response.data.error) {
+        console.error('OpenAI API Error details:', error.response.data.error);
+    }
+    throw new Error('Failed to get AI productivity recommendations. Please check server logs and OpenAI API key/usage limits.');
+  }
+};
+
+/**
+ * @function getPersonalizedGoalRecommendation
+ * @description Generates AI-driven recommendations for goal achievement based on user's goal data.
+ * @param {Object} goalData - An object summarizing a user's specific goal (title, progress, targetDate, etc.).
+ * @returns {Promise<string>} - A string containing personalized goal achievement recommendations.
+ * @throws {Error} If the OpenAI API call fails or API key is missing.
+ */
+const getPersonalizedGoalRecommendation = async (goalData) => {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error('OpenAI API Key is not configured for goal recommendations.');
+  }
+  if (!goalData || typeof goalData !== 'object' || Object.keys(goalData).length === 0) {
+    throw new Error('Goal data is required for personalized goal achievement recommendations.');
+  }
+
+  const prompt = `Based on the following goal details, provide specific and actionable advice to help the user achieve their goal. Focus on breaking it down, staying motivated, and overcoming challenges.
+
+  Goal Details:
+  ${JSON.stringify(goalData, null, 2)}
+
+  Actionable Advice for Goal Achievement:`;
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo", // Consider gpt-4 for more nuanced advice
+      messages: [
+        { role: "system", content: "You are an AI personal growth coach providing intelligent, empathetic, and actionable advice for achieving goals." },
+        { role: "user", content: prompt },
+      ],
+      max_tokens: 250,
+      temperature: 0.7,
+    });
+    return completion.choices[0].message.content.trim();
+  } catch (error) {
+    console.error('Error getting goal recommendations from OpenAI:', error.message);
+    if (error.response && error.response.data && error.response.data.error) {
+        console.error('OpenAI API Error details:', error.response.data.error);
+    }
+    throw new Error('Failed to get AI goal achievement recommendations. Please check server logs and OpenAI API key/usage limits.');
+  }
 };
 
 
 module.exports = {
   summarizeText,
   draftMessage,
-  getMotivationalTip, // Export the new function
+  getMotivationalTip,
+  getPersonalizedProductivityRecommendation, // Export new function
+  getPersonalizedGoalRecommendation,          // Export new function
 };
