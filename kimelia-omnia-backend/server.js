@@ -120,6 +120,8 @@ app.use('/api/v1/admin', require('./routes/adminRoutes'));
 app.use('/api/v1/goals', require('./routes/goalRoutes'));
 app.use('/api/v1', require('./routes/learningResourceRoutes'));
 app.use('/api/v1/projects', require('./routes/projectRoutes'));
+app.use('/api/v1/expenses', require('./routes/expenseRoutes')); 
+app.use('/api/v1/budgets', require('./routes/budgetRoutes'));
 
 app.use(errorHandler);
 
