@@ -6,7 +6,7 @@ const {
   updateTask,
   deleteTask,
 } = require('../controllers/taskController');
-const { protect } = require('../middleware/authMiddleware'); // Import protect middleware
+const { protect } = require('../middleware/authMiddleware');
 const router = express.Router();
 
 /**
@@ -24,10 +24,48 @@ router.use(protect);
  * /tasks:
  *   get:
  *     summary: Retrieve all tasks for the authenticated user.
- *     description: Fetches a list of all tasks belonging to the current user. Tasks can be filtered or sorted (future enhancement).
+ *     description: Fetches a list of all tasks belonging to the current user. Tasks can be filtered by status, priority, tags, project, or searched by keywords.
  *     tags: [Tasks (Omnia Planner)]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [pending, in-progress, completed, deferred, cancelled]
+ *         required: false
+ *         description: Optional. Filter tasks by their status.
+ *         example: in-progress
+ *       - in: query
+ *         name: priority
+ *         schema:
+ *           type: string
+ *           enum: [low, medium, high, urgent]
+ *         required: false
+ *         description: Optional. Filter tasks by their priority.
+ *         example: high
+ *       - in: query
+ *         name: tag
+ *         schema:
+ *           type: string
+ *         required: false
+ *         description: Optional. Filter tasks by a specific tag.
+ *         example: work
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         required: false
+ *         description: Optional. Search for text in task title or description.
+ *         example: "presentation"
+ *       - in: query
+ *         name: projectId
+ *         schema:
+ *           type: string
+ *         required: false
+ *         description: Optional. Filter tasks belonging to a specific project ID.
+ *         example: 60d0fe4f5b5f7e001c0d3a83
  *     responses:
  *       200:
  *         description: A list of tasks.
@@ -48,7 +86,7 @@ router.use(protect);
  *         $ref: '#/components/responses/ServerError'
  *   post:
  *     summary: Create a new task for the authenticated user.
- *     description: Adds a new task entry to the user's Omnia Planner. The `user` field is automatically set based on the authenticated user.
+ *     description: Adds a new task entry to the user's Omnia Planner. The `user` field is automatically set based on the authenticated user. Can optionally link to a project.
  *     tags: [Tasks (Omnia Planner)]
  *     security:
  *       - bearerAuth: []
@@ -66,6 +104,7 @@ router.use(protect);
  *               status: { type: string, enum: [pending, in-progress, completed, deferred, cancelled], example: "in-progress" }
  *               priority: { type: string, enum: [low, medium, high, urgent], example: "high" }
  *               tags: { type: array, items: { type: string }, example: ["work", "reporting"] }
+ *               project: { type: string, description: "Optional ID of a project to link this task to.", example: "60d0fe4f5b5f7e001c0d3a83" }
  *               reminders:
  *                 type: array
  *                 items:
@@ -89,6 +128,12 @@ router.use(protect);
  *         $ref: '#/components/responses/BadRequestError'
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
+ *       404:
+ *         description: Project not found or not authorized to link to it.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       500:
  *         $ref: '#/components/responses/ServerError'
  */
@@ -130,7 +175,7 @@ router.route('/').get(getTasks).post(createTask);
  *         $ref: '#/components/responses/ServerError'
  *   put:
  *     summary: Update an existing task.
- *     description: Modifies details of an existing task. Only the task's owner can update it.
+ *     description: Modifies details of an existing task. Only the task's owner can update it. Can optionally change the linked project.
  *     tags: [Tasks (Omnia Planner)]
  *     security:
  *       - bearerAuth: []
@@ -155,6 +200,7 @@ router.route('/').get(getTasks).post(createTask);
  *               status: { type: string, enum: [pending, in-progress, completed, deferred, cancelled], example: "completed" }
  *               priority: { type: string, enum: [low, medium, high, urgent], example: "medium" }
  *               tags: { type: array, items: { type: string }, example: ["work", "done"] }
+ *               project: { type: string, description: "Optional ID of a project to link this task to, or null to unlink.", example: "60d0fe4f5b5f7e001c0d3a83" }
  *               reminders:
  *                 type: array
  *                 items:
@@ -179,7 +225,11 @@ router.route('/').get(getTasks).post(createTask);
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
  *       404:
- *         $ref: '#/components/responses/NotFoundError'
+ *         description: Task or Project not found, or not authorized.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       500:
  *         $ref: '#/components/responses/ServerError'
  *   delete:
