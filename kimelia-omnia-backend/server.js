@@ -119,8 +119,8 @@ app.use('/api/v1/messages', require('./routes/messageRoutes'));
 app.use('/api/v1/admin', require('./routes/adminRoutes'));
 app.use('/api/v1/goals', require('./routes/goalRoutes'));
 app.use('/api/v1', require('./routes/learningResourceRoutes'));
+app.use('/api/v1/projects', require('./routes/projectRoutes'));
 
-// --- Centralized Error Handling Middleware (MUST be placed LAST) ---
 app.use(errorHandler);
 
 // --- Start Server ---

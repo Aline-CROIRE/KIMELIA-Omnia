@@ -59,9 +59,9 @@ const mongoose = require('mongoose');
  *           example: [work, presentation, urgent]
  *         project:
  *           type: string
- *           description: Optional ID of the project this task is part of. (References Project Model, future)
+ *           description: Optional ID of the project this task is part of (References Project Model).
  *           nullable: true
- *           example: 60d0fe4f5b5f7e001c0d3a7d
+ *           example: 60d0fe4f5b5f7e001c0d3a83 # Updated example to project ID
  *         assignedTo:
  *           type: string
  *           description: Optional ID of another user this task is assigned to (for team environments).
@@ -98,7 +98,7 @@ const taskSchema = new mongoose.Schema(
   {
     user: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User', // Reference to the User model
+      ref: 'User',
       required: true,
     },
     title: {
@@ -132,15 +132,15 @@ const taskSchema = new mongoose.Schema(
         trim: true,
       },
     ],
-    project: { // For future Omnia Workspace integration
+    project: { // Added this field
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Project',
     },
-    assignedTo: { // For team collaboration
+    assignedTo: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
     },
-    reminders: [ // For Omnia Planner notifications
+    reminders: [
       {
         time: { type: Date, required: true },
         method: { type: String, enum: ['email', 'app_notification'], default: 'app_notification' },
@@ -153,3 +153,4 @@ const taskSchema = new mongoose.Schema(
 );
 
 module.exports = mongoose.model('Task', taskSchema);
+
