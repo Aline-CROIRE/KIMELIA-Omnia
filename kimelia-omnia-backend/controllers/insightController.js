@@ -3,24 +3,33 @@ const Task = require('../models/Task');
 const Event = require('../models/Event');
 const Goal = require('../models/Goal');
 const Expense = require('../models/Expense');
+const LearningResource = require('../models/LearningResource'); // For more context
+const Project = require('../models/Project'); // For more context
+const WellnessRecord = require('../models/WellnessRecord'); // For more context
+
 const {
   getPersonalizedProductivityRecommendation,
   getPersonalizedGoalRecommendation,
-} = require('../services/aiService'); // Import AI recommendation functions
+} = require('../services/aiService');
 
 // Helper function to get date range for reports
-const getDateRange = (period = 'week') => {
+const getDateRange = (period = 'week', customStartDate, customEndDate) => {
     const now = new Date();
     let startDate = new Date();
     let endDate = new Date();
 
-    endDate.setHours(23, 59, 59, 999); // End of today
-
-    if (period === 'day') {
-        startDate.setHours(0, 0, 0, 0); // Start of today
+    if (customStartDate && customEndDate) {
+        startDate = new Date(customStartDate);
+        endDate = new Date(customEndDate);
+    } else if (period === 'day') {
+        startDate.setHours(0, 0, 0, 0);
+        endDate.setHours(23, 59, 59, 999);
     } else if (period === 'week') {
         startDate.setDate(now.getDate() - now.getDay()); // Start of current week (Sunday)
         startDate.setHours(0, 0, 0, 0);
+        endDate = new Date(startDate);
+        endDate.setDate(startDate.getDate() + 6); // End of current week (Saturday)
+        endDate.setHours(23, 59, 59, 999);
     } else if (period === 'month') {
         startDate = new Date(now.getFullYear(), now.getMonth(), 1); // Start of current month
         startDate.setHours(0, 0, 0, 0);
@@ -34,6 +43,9 @@ const getDateRange = (period = 'week') => {
     } else { // Default to week
         startDate.setDate(now.getDate() - now.getDay());
         startDate.setHours(0, 0, 0, 0);
+        endDate = new Date(startDate);
+        endDate.setDate(startDate.getDate() + 6);
+        endDate.setHours(23, 59, 59, 999);
     }
 
     return { startDate, endDate };
@@ -44,16 +56,22 @@ const getDateRange = (period = 'week') => {
 // @route   GET /api/v1/insights/productivity-summary
 // @access  Private
 const getProductivitySummary = asyncHandler(async (req, res) => {
-  const { period = 'week' } = req.query; // 'day', 'week', 'month', 'year'
-  const { startDate, endDate } = getDateRange(period);
+  const { period = 'week', startDate: reqStartDate, endDate: reqEndDate } = req.query; // Allow custom date range
+  const { startDate, endDate } = getDateRange(period, reqStartDate, reqEndDate);
 
   // Fetch relevant data for the user within the period
   const totalTasks = await Task.countDocuments({ user: req.user._id, createdAt: { $gte: startDate, $lte: endDate } });
   const completedTasks = await Task.countDocuments({ user: req.user._id, status: 'completed', createdAt: { $gte: startDate, $lte: endDate } });
   const inProgressTasks = await Task.countDocuments({ user: req.user._id, status: 'in-progress', createdAt: { $gte: startDate, $lte: endDate } });
-  const upcomingEvents = await Event.countDocuments({ user: req.user._id, startTime: { $gte: new Date() } }); // Always future events
-  const overdueGoals = await Goal.countDocuments({ user: req.user._id, status: 'overdue' });
+  const overdueTasks = await Task.countDocuments({ user: req.user._id, status: 'pending', dueDate: { $lt: new Date() } }); // Overdue is pending & due date in past
+
+  const totalEvents = await Event.countDocuments({ user: req.user._id, startTime: { $gte: startDate, $lte: endDate } });
+  const upcomingEvents = await Event.countDocuments({ user: req.user._id, startTime: { $gte: new Date() } });
+  const completedEvents = await Event.countDocuments({ user: req.user._id, endTime: { $lt: new Date() } });
+
   const activeGoals = await Goal.countDocuments({ user: req.user._id, status: 'active' });
+  const completedGoals = await Goal.countDocuments({ user: req.user._id, status: 'completed' });
+  const overdueGoals = await Goal.countDocuments({ user: req.user._id, status: 'overdue' });
 
   res.status(200).json({
     success: true,
@@ -65,13 +83,17 @@ const getProductivitySummary = asyncHandler(async (req, res) => {
         total: totalTasks,
         completed: completedTasks,
         inProgress: inProgressTasks,
+        overdue: overdueTasks,
         completionRate: totalTasks > 0 ? (completedTasks / totalTasks * 100).toFixed(2) : 0,
       },
       events: {
+        totalInPeriod: totalEvents,
         upcoming: upcomingEvents,
+        completed: completedEvents,
       },
       goals: {
         active: activeGoals,
+        completed: completedGoals,
         overdue: overdueGoals,
       },
     },
@@ -82,8 +104,8 @@ const getProductivitySummary = asyncHandler(async (req, res) => {
 // @route   GET /api/v1/insights/spending-summary
 // @access  Private
 const getSpendingSummary = asyncHandler(async (req, res) => {
-  const { period = 'month' } = req.query;
-  const { startDate, endDate } = getDateRange(period);
+  const { period = 'month', startDate: reqStartDate, endDate: reqEndDate } = req.query;
+  const { startDate, endDate } = getDateRange(period, reqStartDate, reqEndDate);
 
   const spendingByCategory = await Expense.aggregate([
     {
@@ -101,7 +123,7 @@ const getSpendingSummary = asyncHandler(async (req, res) => {
     {
       $project: {
         category: '$_id',
-        totalSpent: { $round: ['$totalSpent', 2] }, // Round to 2 decimal places
+        totalSpent: { $round: ['$totalSpent', 2] },
         _id: 0
       }
     },
@@ -128,24 +150,49 @@ const getSpendingSummary = asyncHandler(async (req, res) => {
 // @route   POST /api/v1/insights/ai-productivity-recommendations
 // @access  Private
 const getAIPersonalityRecommendation = asyncHandler(async (req, res) => {
-  // Frontend might send specific context in req.body, or we fetch fresh data
-  const { period = 'week', customContext } = req.body; // Allow period or custom context
+  const { period = 'week', customContext } = req.body;
   const { startDate, endDate } = getDateRange(period);
 
-  // Fetching a deeper summary for AI
-  const recentTasks = await Task.find({ user: req.user._id, createdAt: { $gte: startDate, $lte: endDate } }).limit(10).select('title status dueDate priority').lean();
-  const recentEvents = await Event.find({ user: req.user._id, startTime: { $gte: startDate, $lte: endDate } }).limit(5).select('title startTime endTime category').lean();
-  const activeGoals = await Goal.find({ user: req.user._id, status: 'active' }).limit(3).select('title progress targetDate').lean();
+  // --- Deeper Data Fetch for AI ---
+  const userName = req.user.name.split(' ')[0]; // First name for personalization
+  const userEmail = req.user.email;
+  const userRole = req.user.role;
 
-  const userDataSummary = {
+  // Recent activity
+  const recentTasks = await Task.find({ user: req.user._id, createdAt: { $gte: startDate, $lte: endDate } }).limit(15).select('title status dueDate priority').lean();
+  const upcomingEvents = await Event.find({ user: req.user._id, startTime: { $gte: new Date() } }).limit(5).select('title startTime endTime category').lean();
+  const completedTasksCount = await Task.countDocuments({ user: req.user._id, status: 'completed', createdAt: { $gte: startDate, $lte: endDate } });
+  const pendingHighPriorityTasksCount = await Task.countDocuments({ user: req.user._id, status: 'pending', priority: 'high' });
+
+  // Goal context
+  const activeGoals = await Goal.find({ user: req.user._id, status: 'active' }).limit(5).select('title progress targetDate category').lean();
+  const overdueGoals = await Goal.find({ user: req.user._id, status: 'overdue' }).limit(2).select('title targetDate').lean();
+
+  // Wellness context (most recent for current state)
+  const lastWellnessRecord = await WellnessRecord.findOne({ user: req.user._id }).sort({ date: -1 }).limit(1).lean();
+
+
+  const comprehensiveUserData = {
+    userName,
+    userRole,
     period: `${period} (${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()})`,
-    recentTasks,
-    recentEvents,
-    activeGoals,
-    customContext, // If frontend provides additional context
+    recentActivitySummary: {
+        totalTasksLogged: recentTasks.length,
+        completedTasksInPeriod: completedTasksCount,
+        pendingHighPriorityTasks: pendingHighPriorityTasksCount,
+        tasksSample: recentTasks,
+        upcomingEventsSample: upcomingEvents,
+    },
+    goalStatus: {
+        activeGoalsCount: activeGoals.length,
+        overdueGoalsCount: overdueGoals.length,
+        activeGoalsSample: activeGoals,
+    },
+    recentWellness: lastWellnessRecord ? { type: lastWellnessRecord.type, date: lastWellnessRecord.date, details: lastWellnessRecord.details, moodAfter: lastWellnessRecord.moodAfter } : 'No recent wellness activity logged.',
+    customUserChallenge: customContext, // Frontend can send specific struggles
   };
 
-  const recommendation = await getPersonalizedProductivityRecommendation(userDataSummary);
+  const recommendation = await getPersonalizedProductivityRecommendation(comprehensiveUserData);
 
   res.status(200).json({
     success: true,
@@ -164,27 +211,29 @@ const getAIGoalRecommendation = asyncHandler(async (req, res) => {
     res.status(404);
     throw new Error('Goal not found for recommendations.');
   }
-  // Ensure the goal belongs to the authenticated user
   if (goal.user.toString() !== req.user._id.toString()) {
     res.status(401);
     throw new Error('Not authorized to get recommendations for this goal.');
   }
 
-  // Fetch related tasks for richer context
+  // --- Deeper Data Fetch for AI related to this goal ---
   const relatedTasks = await Task.find({ user: req.user._id, project: goal._id }).select('title status priority dueDate').lean();
+  const relatedLearningResources = await LearningResource.find({ user: req.user._id, relatedGoal: goal._id }).select('title url type').lean();
 
-  const goalDataForAI = {
-    title: goal.title,
-    description: goal.description,
-    category: goal.category,
+  const detailedGoalData = {
+    userName: req.user.name.split(' ')[0],
+    goalTitle: goal.title,
+    goalDescription: goal.description,
+    goalCategory: goal.category,
     targetDate: goal.targetDate.toISOString(),
-    progress: goal.progress,
-    status: goal.status,
-    relatedTasks,
-    // Add more context if needed
+    currentProgressPercentage: goal.progress,
+    currentStatus: goal.status,
+    relatedTasksForContext: relatedTasks,
+    suggestedLearningResources: relatedLearningResources,
+    userChallenges: req.body.customContext, // Frontend can specify challenges with this goal
   };
 
-  const recommendation = await getPersonalizedGoalRecommendation(goalDataForAI);
+  const recommendation = await getPersonalizedGoalRecommendation(detailedGoalData);
 
   res.status(200).json({
     success: true,

@@ -1,9 +1,8 @@
 const User = require('../models/User');
 const generateToken = require('../utils/generateToken');
 const asyncHandler = require('../utils/asyncHandler');
-const { sendVerificationEmail } = require('../services/emailService'); // Import email service
-const crypto = require('crypto'); // For comparing verification tokens
-
+const { sendVerificationEmail } = require('../services/notificationService');
+const crypto = require('crypto')
 
 // @desc    Register a new user
 // @route   POST /api/v1/auth/register

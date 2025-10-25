@@ -4,7 +4,8 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const swaggerUi = require('swagger-ui-express');
 const swaggerJsdoc = require('swagger-jsdoc');
-const errorHandler = require('./middleware/errorHandler'); // Custom error handler
+const errorHandler = require('./middleware/errorHandler'); 
+const { startReminderScheduler } = require('./services/schedulerService');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -14,6 +15,7 @@ const connectDB = async () => {
   try {
     await mongoose.connect(process.env.MONGO_URI);
     console.log('MongoDB Connected successfully!');
+       startReminderScheduler();
   } catch (err) {
     console.error('MongoDB Connection Error:', err.message);
     // Exit process with failure if database connection fails
@@ -25,7 +27,7 @@ connectDB();
 // --- Global Middleware ---
 app.use(express.json()); // Built-in body parser for JSON requests
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' ? 'https://yourfrontend.com' : '*', // Allow all origins in dev, restrict in prod
+  origin: process.env.NODE_ENV === 'production' ? 'http://localhost:3000' : '*', // Allow all origins in dev, restrict in prod
   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
   credentials: true, // Allow cookies/authorization headers to be sent
 }));

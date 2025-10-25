@@ -78,6 +78,15 @@ const mongoose = require('mongoose');
  *                 type: string
  *                 description: Reminder message.
  *                 example: "Don't forget to work on your Node.js goal!"
+ *               method:
+ *                 type: string
+ *                 enum: [email, app_notification, sms] # Added sms
+ *                 description: Method of notification.
+ *                 example: app_notification
+ *               isSent:
+ *                 type: boolean
+ *                 default: false
+ *                 description: Flag to indicate if this specific reminder has been sent.
  *           description: A list of reminder objects for the goal.
  *         createdAt:
  *           type: string
@@ -139,6 +148,8 @@ const goalSchema = new mongoose.Schema(
       {
         time: { type: Date, required: true },
         message: { type: String, required: true },
+        method: { type: String, enum: ['email', 'app_notification', 'sms'], default: 'app_notification' }, // Added sms
+        isSent: { type: Boolean, default: false } // New field to track if reminder was sent
       }
     ],
   },
@@ -147,7 +158,6 @@ const goalSchema = new mongoose.Schema(
   }
 );
 
-// Optional: Add a pre-save hook to automatically update status to 'overdue' if targetDate has passed
 goalSchema.pre('save', function(next) {
   if (this.targetDate && this.targetDate < Date.now() && this.status === 'active') {
     this.status = 'overdue';
@@ -155,7 +165,6 @@ goalSchema.pre('save', function(next) {
   next();
 });
 
-// For updates, ensure similar logic
 goalSchema.pre('findOneAndUpdate', function(next) {
     const update = this.getUpdate();
     if (update.targetDate && update.targetDate < Date.now() && update.status === 'active') {

@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
-const crypto = require('crypto'); // Node.js built-in module for cryptographic functions
+const crypto = require('crypto');
 
 /**
  * @swagger
@@ -47,15 +47,20 @@ const crypto = require('crypto'); // Node.js built-in module for cryptographic f
  *           description: Indicates if the user's email address has been verified.
  *           readOnly: true
  *           example: false
+ *         phoneNumber:
+ *           type: string
+ *           description: User's phone number for SMS notifications (e.g., +15551234567).
+ *           example: "+250788123456"
+ *           nullable: true
  *         verificationToken:
  *           type: string
  *           description: Unique token used for email verification. This field is hidden from API responses.
- *           writeOnly: true # Prevents it from being shown in Swagger UI responses
+ *           writeOnly: true
  *         verificationTokenExpires:
  *           type: string
  *           format: date-time
  *           description: Timestamp when the verification token expires. This field is hidden from API responses.
- *           writeOnly: true # Prevents it from being shown in Swagger UI responses
+ *           writeOnly: true
  *         settings:
  *           type: object
  *           description: User-specific preferences and configurable settings.
@@ -117,8 +122,14 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-    verificationToken: String, // Store the hashed token
-    verificationTokenExpires: Date, // Store expiration time
+    phoneNumber: { // New field for SMS
+        type: String,
+        match: [/^(\+|00)[1-9]\d{1,14}$/, 'Please enter a valid international phone number (e.g., +12345678900)'],
+        trim: true,
+        sparse: true, // Allows null/undefined to be unique
+    },
+    verificationToken: String,
+    verificationTokenExpires: Date,
     settings: {
         theme: { type: String, default: 'light', enum: ['light', 'dark', 'system'] },
         timezone: { type: String, default: 'UTC' }
@@ -129,7 +140,6 @@ const userSchema = new mongoose.Schema(
   }
 );
 
-// --- Mongoose Pre-Save Hook for Password Hashing ---
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) {
     return next();
@@ -139,26 +149,21 @@ userSchema.pre('save', async function (next) {
   next();
 });
 
-// --- Mongoose Instance Method for Password Comparison ---
 userSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
-// --- Mongoose Instance Method for Generating Verification Token ---
 userSchema.methods.getVerificationToken = function () {
-    // Generate a random 32-byte hex string (more secure than just base64)
     const verificationToken = crypto.randomBytes(32).toString('hex');
 
-    // Hash the token and save it to the database (for comparison, never store plain tokens)
     this.verificationToken = crypto
       .createHash('sha256')
       .update(verificationToken)
       .digest('hex');
 
-    // Set token expiration (e.g., 1 hour from now)
     this.verificationTokenExpires = Date.now() + 60 * 60 * 1000; // 1 hour
 
-    return verificationToken; // Return the *unhashed* token to be sent in the email
+    return verificationToken;
 };
 
 

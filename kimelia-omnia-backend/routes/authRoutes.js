@@ -7,6 +7,13 @@ const {
   updateUserProfile,
 } = require('../controllers/authController');
 const { protect, authorizeRoles } = require('../middleware/authMiddleware');
+const {
+    validateRegister,
+    validateLogin,
+    validateVerifyEmail,
+    validateUpdateUserProfile,
+    validateId // Needed for admin routes, but often imported globally if all IDs are validated similarly
+} = require('../middleware/validationMiddleware');
 const router = express.Router();
 
 /**
@@ -79,7 +86,7 @@ const router = express.Router();
  *       500:
  *         $ref: '#/components/responses/ServerError'
  */
-router.post('/register', registerUser);
+router.post('/register', validateRegister, registerUser);
 
 /**
  * @swagger
@@ -134,7 +141,7 @@ router.post('/register', registerUser);
  *       500:
  *         $ref: '#/components/responses/ServerError'
  */
-router.post('/verify-email', verifyEmail);
+router.post('/verify-email', validateVerifyEmail, verifyEmail);
 
 
 /**
@@ -191,7 +198,7 @@ router.post('/verify-email', verifyEmail);
  *       500:
  *         $ref: '#/components/responses/ServerError'
  */
-router.post('/login', loginUser);
+router.post('/login', validateLogin, loginUser);
 
 /**
  * @swagger
@@ -302,7 +309,9 @@ router.post('/login', loginUser);
  *       500:
  *         $ref: '#/components/responses/ServerError'
  */
-router.route('/profile').get(protect, getUserProfile).put(protect, updateUserProfile);
+router.route('/profile')
+    .get(protect, getUserProfile)
+    .put(protect, validateUpdateUserProfile, updateUserProfile);
 
 /**
  * @swagger
@@ -334,7 +343,6 @@ router.route('/profile').get(protect, getUserProfile).put(protect, updateUserPro
  *         $ref: '#/components/responses/ServerError'
  */
 router.get('/admin-data', protect, authorizeRoles('admin'), (req, res) => {
-    // In a real application, this would fetch and return actual sensitive admin data
     res.json({
         message: `Welcome, Admin ${req.user.name}! Here is your secret data.`,
         user: req.user

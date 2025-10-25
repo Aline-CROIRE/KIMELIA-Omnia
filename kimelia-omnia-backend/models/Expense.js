@@ -60,7 +60,7 @@ const mongoose = require('mongoose');
  *         receiptUrl:
  *           type: string
  *           format: url
- *           description: Optional URL to a scanned receipt or invoice. (Future: file upload integration)
+ *           description: Optional URL to a scanned receipt or invoice.
  *           nullable: true
  *           example: https://example.com/receipts/grocery_nov2024.jpg
  *         createdAt:
@@ -125,3 +125,5 @@ const expenseSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+module.exports = mongoose.model('Expense', expenseSchema);

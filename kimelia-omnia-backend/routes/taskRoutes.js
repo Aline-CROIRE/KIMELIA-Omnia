@@ -1,3 +1,4 @@
+
 const express = require('express');
 const {
   getTasks,
@@ -7,6 +8,11 @@ const {
   deleteTask,
 } = require('../controllers/taskController');
 const { protect } = require('../middleware/authMiddleware');
+const {
+    validateId, // For task ID in params
+    validateCreateTask,
+    validateUpdateTask
+} = require('../middleware/validationMiddleware');
 const router = express.Router();
 
 /**
@@ -137,7 +143,9 @@ router.use(protect);
  *       500:
  *         $ref: '#/components/responses/ServerError'
  */
-router.route('/').get(getTasks).post(createTask);
+router.route('/')
+    .get(getTasks)
+    .post(validateCreateTask, createTask);
 
 /**
  * @swagger
@@ -263,6 +271,9 @@ router.route('/').get(getTasks).post(createTask);
  *       500:
  *         $ref: '#/components/responses/ServerError'
  */
-router.route('/:id').get(getTask).put(updateTask).delete(deleteTask);
+router.route('/:id')
+    .get(validateId, getTask)
+    .put(validateId, validateUpdateTask, updateTask)
+    .delete(validateId, deleteTask);
 
 module.exports = router;

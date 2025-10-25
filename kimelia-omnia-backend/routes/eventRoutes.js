@@ -1,3 +1,4 @@
+
 const express = require('express');
 const {
   getEvents,
@@ -7,6 +8,11 @@ const {
   deleteEvent,
 } = require('../controllers/eventController');
 const { protect } = require('../middleware/authMiddleware');
+const {
+    validateId, // For event ID in params
+    validateCreateEvent,
+    validateUpdateEvent
+} = require('../middleware/validationMiddleware');
 const router = express.Router();
 
 /**
@@ -111,7 +117,9 @@ router.use(protect);
  *       500:
  *         $ref: '#/components/responses/ServerError'
  */
-router.route('/').get(getEvents).post(createEvent);
+router.route('/')
+    .get(getEvents)
+    .post(validateCreateEvent, createEvent);
 
 /**
  * @swagger
@@ -234,6 +242,9 @@ router.route('/').get(getEvents).post(createEvent);
  *       500:
  *         $ref: '#/components/responses/ServerError'
  */
-router.route('/:id').get(getEvent).put(updateEvent).delete(deleteEvent);
+router.route('/:id')
+    .get(validateId, getEvent)
+    .put(validateId, validateUpdateEvent, updateEvent)
+    .delete(validateId, deleteEvent);
 
 module.exports = router;

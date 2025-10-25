@@ -1,3 +1,4 @@
+
 const express = require('express');
 const {
   getAllUsers,
@@ -6,6 +7,10 @@ const {
   deleteUser,
 } = require('../controllers/adminController');
 const { protect, authorizeRoles } = require('../middleware/authMiddleware');
+const {
+    validateId, // For user ID in params
+    validateAdminUpdateUser // For user update by admin
+} = require('../middleware/validationMiddleware');
 const router = express.Router();
 
 /**
@@ -48,7 +53,8 @@ router.use(protect, authorizeRoles('admin'));
  *       500:
  *         $ref: '#/components/responses/ServerError'
  */
-router.route('/users').get(getAllUsers);
+router.route('/users')
+    .get(getAllUsers);
 
 /**
  * @swagger
@@ -159,7 +165,7 @@ router.route('/users').get(getAllUsers);
  *       404:
  *         $ref: '#/components/responses/NotFoundError'
  *       409:
- *         $ref: '#/components/responses/ConflictError' # E.g., if new email already exists
+ *         $ref: '#/components/responses/ConflictError'
  *       500:
  *         $ref: '#/components/responses/ServerError'
  *   delete:
@@ -187,7 +193,7 @@ router.route('/users').get(getAllUsers);
  *                 success: { type: boolean, example: true }
  *                 message: { type: string, example: "User deleted successfully by admin." }
  *       400:
- *         $ref: '#/components/responses/BadRequestError' # E.g., admin trying to delete self
+ *         $ref: '#/components/responses/BadRequestError'
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
  *       403:
@@ -197,6 +203,9 @@ router.route('/users').get(getAllUsers);
  *       500:
  *         $ref: '#/components/responses/ServerError'
  */
-router.route('/users/:id').get(getUserById).put(updateUser).delete(deleteUser);
+router.route('/users/:id')
+    .get(validateId, getUserById)
+    .put(validateId, validateAdminUpdateUser, updateUser)
+    .delete(validateId, deleteUser);
 
 module.exports = router;
