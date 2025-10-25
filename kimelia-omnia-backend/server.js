@@ -123,6 +123,7 @@ app.use('/api/v1/projects', require('./routes/projectRoutes'));
 app.use('/api/v1/expenses', require('./routes/expenseRoutes')); 
 app.use('/api/v1/budgets', require('./routes/budgetRoutes'));
 app.use('/api/v1', require('./routes/insightRoutes'));
+app.use('/api/v1', require('./routes/wellnessRoutes'));
 
 // --- Error Handling Middleware ---
 app.use(errorHandler);
