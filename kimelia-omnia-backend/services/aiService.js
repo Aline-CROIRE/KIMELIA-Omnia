@@ -5,7 +5,7 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// --- AI-Powered Text Operations ---
+// --- AI-Powered Text Operations (Summarization & Drafting) ---
 
 /**
  * @function summarizeText
@@ -17,7 +17,7 @@ const openai = new OpenAI({
  */
 const summarizeText = async (text, promptPrefix = 'Summarize the following text concisely and professionally:') => {
   if (!process.env.OPENAI_API_KEY) {
-    throw new Error('OpenAI API Key is not configured in environment variables.');
+    throw new Error('OpenAI API Key is not configured in environment variables. Cannot summarize.');
   }
   if (!text || text.length < 50) {
     throw new Error('Input text must be at least 50 characters for effective summarization.');
@@ -25,7 +25,7 @@ const summarizeText = async (text, promptPrefix = 'Summarize the following text 
 
   try {
     const completion = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo", // Or "gpt-4" for higher quality and cost
+      model: "gpt-3.5-turbo", // Consider "gpt-4" for higher quality and cost
       messages: [
         { role: "system", content: "You are a helpful assistant that excels at summarizing text concisely and accurately." },
         { role: "user", content: `${promptPrefix}\n\nText to summarize:\n${text}` },
@@ -56,7 +56,7 @@ const summarizeText = async (text, promptPrefix = 'Summarize the following text 
  */
 const draftMessage = async (instruction, context = '', tone = 'professional', format = 'email') => {
   if (!process.env.OPENAI_API_KEY) {
-    throw new Error('OpenAI API Key is not configured in environment variables.');
+    throw new Error('OpenAI API Key is not configured in environment variables. Cannot draft message.');
   }
   if (!instruction || instruction.length < 20) {
     throw new Error('Please provide a detailed instruction (at least 20 characters) for drafting the message.');
@@ -70,13 +70,13 @@ const draftMessage = async (instruction, context = '', tone = 'professional', fo
 
   try {
     const completion = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
+      model: "gpt-3.5-turbo", // Consider "gpt-4" for higher quality and cost
       messages: [
         { role: "system", content: "You are a helpful assistant that drafts clear, concise, and appropriate messages." },
         { role: "user", content: userPrompt },
       ],
-      max_tokens: 300,
-      temperature: 0.7,
+      max_tokens: 300, // Max length of the draft in tokens
+      temperature: 0.7, // More creative for drafting
     });
 
     return completion.choices[0].message.content.trim();
@@ -89,9 +89,9 @@ const draftMessage = async (instruction, context = '', tone = 'professional', fo
   }
 };
 
-// --- AI-Powered Motivation / Tips ---
+// --- AI-Powered Motivation / Tips (Enhanced) ---
 
-const motivationalTips = [
+const staticMotivationalTips = [
   "The best way to predict the future is to create it.",
   "Your only limit is your mind.",
   "Success is not final, failure is not fatal: it is the courage to continue that counts.",
@@ -106,49 +106,87 @@ const motivationalTips = [
 
 /**
  * @function getMotivationalTip
- * @description Provides a motivational tip.
- * @param {string} userId - The ID of the user (for future personalization based on goals/progress).
+ * @description Provides a personalized motivational tip using AI, based on user context.
+ * @param {Object} [userContext={}] - Optional, comprehensive user context including recent activities, goals, etc.
+ *   Example: { userName: 'Jane', completedTasksToday: 5, activeGoals: ['Learn Python'], challenges: 'feeling overwhelmed' }
  * @returns {Promise<string>} - A motivational tip.
+ * @throws {Error} If the OpenAI API call fails or API key is missing.
  */
-const getMotivationalTip = async (userId) => {
-  // Enhanced to potentially use AI with user context in the future
-  // For now, return a random static tip.
-  const randomIndex = Math.floor(Math.random() * motivationalTips.length);
-  return motivationalTips[randomIndex];
+const getMotivationalTip = async (userContext = {}) => {
+  if (!process.env.OPENAI_API_KEY) {
+    // Fallback to static tips if AI key is missing
+    const randomIndex = Math.floor(Math.random() * staticMotivationalTips.length);
+    return staticMotivationalTips[randomIndex];
+  }
+
+  let prompt;
+  if (Object.keys(userContext).length > 0) {
+    prompt = `Given the following user context, provide a single, inspiring, and actionable motivational tip (max 2 sentences) that encourages growth and perseverance. Be empathetic and positive.
+
+User Context:
+${JSON.stringify(userContext, null, 2)}
+
+Motivational Tip:`;
+  } else {
+    // If no context, use a general AI prompt
+    prompt = `Provide a single, inspiring, and actionable motivational tip (max 2 sentences) about productivity or personal growth.`;
+  }
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [
+        { role: "system", content: "You are an encouraging and wise AI coach, providing concise and impactful motivational tips." },
+        { role: "user", content: prompt },
+      ],
+      max_tokens: 80, // Keep tips very concise
+      temperature: 0.9, // More creative for motivational tips
+    });
+    return completion.choices[0].message.content.trim();
+  } catch (error) {
+    console.error('Error getting AI motivational tip:', error.message);
+    if (error.response && error.response.data && error.response.data.error) {
+        console.error('OpenAI API Error details:', error.response.data.error);
+    }
+    // Fallback to static tips on AI failure
+    const randomIndex = Math.floor(Math.random() * staticMotivationalTips.length);
+    return staticMotivationalTips[randomIndex];
+  }
 };
 
-// --- New AI Functions for Omnia Insights ---
+// --- AI Functions for Omnia Insights (Enhanced) ---
 
 /**
  * @function getPersonalizedProductivityRecommendation
- * @description Generates AI-driven productivity recommendations based on user activity summary.
- * @param {Object} userDataSummary - An object summarizing user's tasks, events, and their status.
+ * @description Generates AI-driven productivity recommendations based on comprehensive user activity data.
+ * @param {Object} comprehensiveUserData - An object containing a deep summary of user's tasks, events, goals, recent performance.
+ *   Example: { recentTasks: [], upcomingEvents: [], activeGoals: [], completionRate: '70%', challenges: 'too many distractions' }
  * @returns {Promise<string>} - A string containing personalized productivity recommendations.
  * @throws {Error} If the OpenAI API call fails or API key is missing.
  */
-const getPersonalizedProductivityRecommendation = async (userDataSummary) => {
+const getPersonalizedProductivityRecommendation = async (comprehensiveUserData) => {
   if (!process.env.OPENAI_API_KEY) {
     throw new Error('OpenAI API Key is not configured for productivity recommendations.');
   }
-  if (!userDataSummary || typeof userDataSummary !== 'object' || Object.keys(userDataSummary).length === 0) {
-    throw new Error('User data summary is required for personalized productivity recommendations.');
+  if (!comprehensiveUserData || typeof comprehensiveUserData !== 'object' || Object.keys(comprehensiveUserData).length === 0) {
+    throw new Error('Comprehensive user data is required for personalized productivity recommendations.');
   }
 
-  const prompt = `Based on the following user activity summary, provide actionable and encouraging productivity recommendations to help them optimize their day and achieve more. Focus on improvements, time management, and habit formation.
+  const prompt = `Analyze the following comprehensive user activity and goal data. Provide actionable, intelligent, and empathetic productivity recommendations. Focus on optimizing their workflow, managing time effectively, reducing distractions, and maintaining energy. Suggest specific strategies.
 
-  User Activity Summary:
-  ${JSON.stringify(userDataSummary, null, 2)}
+Comprehensive User Data:
+${JSON.stringify(comprehensiveUserData, null, 2)}
 
-  Recommendations:`;
+Actionable Productivity Recommendations:`;
 
   try {
     const completion = await openai.chat.completions.create({
       model: "gpt-3.5-turbo", // Consider gpt-4 for more nuanced advice
       messages: [
-        { role: "system", content: "You are an AI productivity coach providing intelligent, empathetic, and actionable advice." },
+        { role: "system", content: "You are an AI productivity coach providing intelligent, empathetic, and actionable advice. Structure your advice with clear points." },
         { role: "user", content: prompt },
       ],
-      max_tokens: 250,
+      max_tokens: 300, // Allow more detail for comprehensive recommendations
       temperature: 0.7,
     });
     return completion.choices[0].message.content.trim();
@@ -163,34 +201,35 @@ const getPersonalizedProductivityRecommendation = async (userDataSummary) => {
 
 /**
  * @function getPersonalizedGoalRecommendation
- * @description Generates AI-driven recommendations for goal achievement based on user's goal data.
- * @param {Object} goalData - An object summarizing a user's specific goal (title, progress, targetDate, etc.).
+ * @description Generates AI-driven recommendations for goal achievement based on detailed user's goal data and progress.
+ * @param {Object} detailedGoalData - An object containing a deep summary of a user's specific goal (title, progress, targetDate, related tasks, learning resources, challenges).
+ *   Example: { title: 'Learn React', progress: 30, targetDate: '2025-06-01', relatedTasks: [], learningResources: [] }
  * @returns {Promise<string>} - A string containing personalized goal achievement recommendations.
  * @throws {Error} If the OpenAI API call fails or API key is missing.
  */
-const getPersonalizedGoalRecommendation = async (goalData) => {
+const getPersonalizedGoalRecommendation = async (detailedGoalData) => {
   if (!process.env.OPENAI_API_KEY) {
     throw new Error('OpenAI API Key is not configured for goal recommendations.');
   }
-  if (!goalData || typeof goalData !== 'object' || Object.keys(goalData).length === 0) {
-    throw new Error('Goal data is required for personalized goal achievement recommendations.');
+  if (!detailedGoalData || typeof detailedGoalData !== 'object' || Object.keys(detailedGoalData).length === 0) {
+    throw new Error('Detailed goal data is required for personalized goal achievement recommendations.');
   }
 
-  const prompt = `Based on the following goal details, provide specific and actionable advice to help the user achieve their goal. Focus on breaking it down, staying motivated, and overcoming challenges.
+  const prompt = `Analyze the following detailed goal information. Provide specific, actionable advice and strategies to help the user progress towards this goal. Consider breaking it down further, suggesting relevant learning paths, maintaining motivation, and overcoming potential challenges.
 
-  Goal Details:
-  ${JSON.stringify(goalData, null, 2)}
+Detailed Goal Data:
+${JSON.stringify(detailedGoalData, null, 2)}
 
-  Actionable Advice for Goal Achievement:`;
+Actionable Advice for Goal Achievement:`;
 
   try {
     const completion = await openai.chat.completions.create({
       model: "gpt-3.5-turbo", // Consider gpt-4 for more nuanced advice
       messages: [
-        { role: "system", content: "You are an AI personal growth coach providing intelligent, empathetic, and actionable advice for achieving goals." },
+        { role: "system", content: "You are an AI personal growth coach providing intelligent, empathetic, and actionable advice for achieving goals. Break down complex advice into clear, numbered steps or bullet points." },
         { role: "user", content: prompt },
       ],
-      max_tokens: 250,
+      max_tokens: 300, // Allow more detail for comprehensive recommendations
       temperature: 0.7,
     });
     return completion.choices[0].message.content.trim();
@@ -203,11 +242,58 @@ const getPersonalizedGoalRecommendation = async (goalData) => {
   }
 };
 
+// --- AI Functions for Omnia Wellness (Enhanced) ---
+
+/**
+ * @function getWellnessSuggestion
+ * @description Generates AI-driven wellness suggestions based on detailed user wellness context.
+ * @param {Object} detailedWellnessContext - An object containing user's recent wellness activities, schedule, current mood/stress, and requested suggestion type.
+ *   Example: { currentMood: 'stressed', recentActivity: 'worked 5 hours without break', suggestionType: 'break', timezone: 'UTC' }
+ * @param {string} [suggestionType='general'] - Type of suggestion needed (e.g., 'break', 'meal', 'exercise', 'mindfulness', 'hydration', 'sleep_aid').
+ * @returns {Promise<string>} - A string containing a personalized wellness suggestion.
+ * @throws {Error} If the OpenAI API call fails or API key is missing.
+ */
+const getWellnessSuggestion = async (detailedWellnessContext, suggestionType = 'general') => {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error('OpenAI API Key is not configured for wellness suggestions.');
+  }
+  if (!detailedWellnessContext || typeof detailedWellnessContext !== 'object' || Object.keys(detailedWellnessContext).length === 0) {
+    throw new Error('Detailed user wellness context is required for personalized wellness suggestions.');
+  }
+
+  let prompt = `Based on the following detailed user wellness context, provide a specific, actionable, and encouraging wellness suggestion related to "${suggestionType}". Make it empathetic, positive, and easy to implement. Include timing or duration if relevant.
+
+Detailed User Wellness Context:
+${JSON.stringify(detailedWellnessContext, null, 2)}
+
+Wellness Suggestion:`;
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [
+        { role: "system", content: "You are an AI wellness assistant providing intelligent, empathetic, and actionable suggestions for health and mental balance. Focus on practical, short tips." },
+        { role: "user", content: prompt },
+      ],
+      max_tokens: 120, // Allow slightly more detail for wellness suggestions
+      temperature: 0.8, // A bit more creative for suggestions
+    });
+    return completion.choices[0].message.content.trim();
+  } catch (error) {
+    console.error('Error getting wellness suggestion from OpenAI:', error.message);
+    if (error.response && error.response.data && error.response.data.error) {
+        console.error('OpenAI API Error details:', error.response.data.error);
+    }
+    throw new Error('Failed to get AI wellness suggestion. Please check server logs and OpenAI API key/usage limits.');
+  }
+};
+
 
 module.exports = {
   summarizeText,
   draftMessage,
   getMotivationalTip,
-  getPersonalizedProductivityRecommendation, // Export new function
-  getPersonalizedGoalRecommendation,          // Export new function
+  getPersonalizedProductivityRecommendation,
+  getPersonalizedGoalRecommendation,
+  getWellnessSuggestion,
 };
