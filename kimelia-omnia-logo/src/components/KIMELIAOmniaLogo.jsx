@@ -60,11 +60,9 @@ const KIMELIAOmniaLogo = ({ iconSize = '60px', textSize = '2.2rem', withDownload
     if (iconRef.current) {
       const svgElement = iconRef.current.querySelector('svg');
       if (svgElement) {
-        // Clone the SVG to manipulate it without affecting the one currently rendered
+        
         const clonedSvg = svgElement.cloneNode(true);
 
-        // Remove attributes/elements that are for accessibility or specific to the web context,
-        // if you want a 'cleaner' standalone SVG file.
         clonedSvg.removeAttribute('aria-labelledby');
         const titleElement = clonedSvg.querySelector('title');
         if (titleElement) titleElement.remove();
@@ -79,7 +77,7 @@ const KIMELIAOmniaLogo = ({ iconSize = '60px', textSize = '2.2rem', withDownload
         link.download = 'kimelia-omnia-icon.svg';
         link.href = svgUrl;
         link.click();
-        URL.revokeObjectURL(svgUrl); // Clean up the object URL immediately
+        URL.revokeObjectURL(svgUrl); 
       } else {
           console.error("SVG element not found within iconRef for download.");
       }
@@ -91,7 +89,7 @@ const KIMELIAOmniaLogo = ({ iconSize = '60px', textSize = '2.2rem', withDownload
   return (
     <div>
       <LogoContainer ref={logoRef}>
-        <div ref={iconRef}> {/* Wrap icon in a div for easier ref access */}
+        <div ref={iconRef}> 
           <KIMELIAOmniaIcon size={iconSize} /> {/* No 'id' prop needed anymore, useId handles it */}
         </div>
         <KIMELIAOmniaText fontSize={textSize} />
