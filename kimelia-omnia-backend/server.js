@@ -7,8 +7,6 @@ const swaggerJsdoc = require('swagger-jsdoc');
 const errorHandler = require('./middleware/errorHandler');
 
 const { startReminderScheduler } = require('./services/schedulerService');
-
-// Google service imports
 const { GOOGLE_API_SCOPES } = require('./services/googleApiService');
 
 
@@ -18,15 +16,29 @@ const PORT = process.env.PORT || 5000;
 // --- Database Connection ---
 const connectDB = async () => {
   try {
-    await mongoose.connect(process.env.MONGO_URI);
-    console.log('MongoDB Connected successfully!');
-    startReminderScheduler();
+    // Connect to global.__MONGO_URI__ if Jest is running tests, otherwise use MONGO_URI
+    const dbUri = process.env.NODE_ENV === 'test' ? global.__MONGO_URI__ : process.env.MONGO_URI;
+    if (!dbUri) {
+        console.error('MONGO_URI or __MONGO_URI__ is not defined. Please check .env or jest-mongodb setup.');
+        process.exit(1);
+    }
+    await mongoose.connect(dbUri);
+    console.log(`MongoDB Connected successfully! (${process.env.NODE_ENV} environment)`);
+
+    // Start the reminder scheduler ONLY if not in test environment
+    if (process.env.NODE_ENV !== 'test') {
+        startReminderScheduler();
+    }
   } catch (err) {
     console.error('MongoDB Connection Error:', err.message);
     process.exit(1);
   }
 };
-connectDB();
+
+// Only connect DB and start server/scheduler if not in test environment (Jest handles its own connections)
+if (process.env.NODE_ENV !== 'test') {
+    connectDB();
+}
 
 // --- Global Middleware ---
 app.use(express.json());
@@ -37,80 +49,83 @@ app.use(cors({
 }));
 
 // --- Swagger API Documentation Setup ---
-const swaggerOptions = {
-  swaggerDefinition: {
-    openapi: '3.0.0',
-    info: {
-      title: 'KIMELIA Omnia API Documentation',
-      version: '1.0.0',
-      description: `Comprehensive API documentation for KIMELIA Omnia, your AI-driven productivity platform. This API empowers individuals, students, startups, and businesses to organize, manage, and optimize all aspects of life and work.
-      \n\n**Google Integration Scopes:**
-      \n\`\`\`
-      ${GOOGLE_API_SCOPES.join('\n')}
-      \`\`\`
-      \n\n**Note on Microsoft Teams & Notion:** These integrations are currently disabled/removed.`,
-      contact: {
-        name: 'KIMELIA Soft Support',
-        url: 'http://kimeliasoft.com/support',
-        email: 'support@kimeliasoft.com'
-      },
-    },
-    servers: [
-      {
-        url: `http://localhost:${PORT}/api/v1`,
-        description: 'Development Server',
-      },
-    ],
-    components: {
-      securitySchemes: {
-        bearerAuth: {
-          type: 'http',
-          scheme: 'bearer',
-          bearerFormat: 'JWT',
-          description: 'Enter your JWT Bearer token in the format "Bearer TOKEN".'
-        }
-      },
-      schemas: {
-        AuthResponse: {
-          type: 'object',
-          properties: {
-            _id: { type: 'string', example: '60d0fe4f5b5f7e001c0d3a7b' },
-            name: { type: 'string', example: 'Jane Doe' },
-            email: { type: 'string', example: 'jane.doe@example.com' },
-            role: { type: 'string', example: 'individual' },
-            isVerified: { type: 'boolean', example: true },
-            token: { type: 'string', example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjYwZDBmZTRmNWI1ZjdlMDAxYzBkM2E3YiIsImlhdCI6MTYyNDExNDQ1MSwiZXhwIjoxNjI0MTE4MDUxfQ.xxxxxxxxxxxxxxxxxxxxxxxx' }
-          }
+// Only set up Swagger if not in test environment
+if (process.env.NODE_ENV !== 'test') {
+    const swaggerOptions = {
+        swaggerDefinition: {
+            openapi: '3.0.0',
+            info: {
+                title: 'KIMELIA Omnia API Documentation',
+                version: '1.0.0',
+                description: `Comprehensive API documentation for KIMELIA Omnia, your AI-driven productivity platform. This API empowers individuals, students, startups, and businesses to organize, manage, and optimize all aspects of life and work.
+                \n\n**Google Integration Scopes:**
+                \n\`\`\`
+                ${GOOGLE_API_SCOPES.join('\n')}
+                \`\`\`
+                \n\n**Note on Microsoft Teams & Notion:** These integrations are currently disabled/removed.`,
+                contact: {
+                    name: 'KIMELIA Soft Support',
+                    url: 'http://kimeliasoft.com/support',
+                    email: 'support@kimeliasoft.com'
+                },
+            },
+            servers: [
+                {
+                    url: `http://localhost:${PORT}/api/v1`,
+                    description: 'Development Server',
+                },
+            ],
+            components: {
+                securitySchemes: {
+                    bearerAuth: {
+                        type: 'http',
+                        scheme: 'bearer',
+                        bearerFormat: 'JWT',
+                        description: 'Enter your JWT Bearer token in the format "Bearer TOKEN".'
+                    }
+                },
+                schemas: {
+                    AuthResponse: {
+                        type: 'object',
+                        properties: {
+                            _id: { type: 'string', example: '60d0fe4f5b5f7e001c0d3a7b' },
+                            name: { type: 'string', example: 'Jane Doe' },
+                            email: { type: 'string', example: 'jane.doe@example.com' },
+                            role: { type: 'string', example: 'individual' },
+                            isVerified: { type: 'boolean', example: true },
+                            token: { type: 'string', example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjYwZDBmZTRmNWI1ZjdlMDAxYzBkM2E3YiIsImlhdCI6MTYyNDExNDQ1MSwiZXhwIjoxNjI0MTE4MDUxfQ.xxxxxxxxxxxxxxxxxxxxxxxx' }
+                        }
+                    },
+                    ErrorResponse: {
+                        type: 'object',
+                        properties: {
+                            message: { type: 'string', example: 'Resource not found' },
+                            statusCode: { type: 'number', example: 404 },
+                            stack: { type: 'string', nullable: true, description: 'Stack trace (only in development)' }
+                        }
+                    }
+                }
+            },
+            security: [
+                {
+                    bearerAuth: []
+                }
+            ]
         },
-        ErrorResponse: {
-          type: 'object',
-          properties: {
-            message: { type: 'string', example: 'Resource not found' },
-            statusCode: { type: 'number', example: 404 },
-            stack: { type: 'string', nullable: true, description: 'Stack trace (only in development)' }
-          }
-        }
-      }
-    },
-    security: [
-      {
-        bearerAuth: []
-      }
-    ]
-  },
-  apis: [
-    './routes/*.js',
-    './models/*.js',
-    './middleware/errorHandler.js',
-    './middleware/validationMiddleware.js',
-    './services/*.js'
-  ],
-};
+        apis: [
+            './routes/*.js',
+            './models/*.js',
+            './middleware/errorHandler.js',
+            './middleware/validationMiddleware.js',
+            './services/*.js'
+        ],
+    };
 
-const swaggerSpec = swaggerJsdoc(swaggerOptions);
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
-  explorer: true
-}));
+    const swaggerSpec = swaggerJsdoc(swaggerOptions);
+    app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+        explorer: true
+    }));
+}
 
 // --- Root Route ---
 app.get('/', (req, res) => {
@@ -137,4 +152,9 @@ app.use('/api/v1/integrations', require('./routes/integrationRoutes'));
 app.use(errorHandler);
 
 // --- Start Server ---
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// Only listen on port if not in test environment
+if (process.env.NODE_ENV !== 'test') {
+    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+}
+
+module.exports = app; 
