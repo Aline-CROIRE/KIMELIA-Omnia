@@ -42,34 +42,66 @@ const updateUserProfileSchema = Joi.object({
   name: Joi.string().min(2).max(50).optional(),
   email: Joi.string().email().optional(),
   password: Joi.string().min(6).optional(),
-  role: Joi.string().valid('individual', 'student', 'startup').optional(), // Admin role can't be set by user
+  role: Joi.string().valid('individual', 'student', 'startup').optional(),
   phoneNumber: Joi.string().pattern(/^(\+|00)[1-9]\d{1,14}$/).optional().messages({'string.pattern.base': 'Phone number must be a valid international format (e.g., +12345678900)'}),
   settings: Joi.object({
     theme: Joi.string().valid('light', 'dark', 'system').optional(),
     timezone: Joi.string().optional(),
-  }).optional().unknown(true), // Allow unknown fields in settings for flexibility
+  }).optional().unknown(true),
+  googleCalendar: Joi.object({
+      calendarId: Joi.string().optional(),
+  }).optional().unknown(true),
+  gmail: Joi.object({
+      // User can't directly set connected/lastSync/historyId, these are managed by the integration service
+  }).optional().unknown(true),
+  slack: Joi.object({
+      teamId: Joi.string().optional(),
+  }).optional().unknown(true),
+  // notion removed
+  // microsoftTeams removed
 });
 
 const adminUpdateUserSchema = Joi.object({
     name: Joi.string().min(2).max(50).optional(),
     email: Joi.string().email().optional(),
-    role: Joi.string().valid('individual', 'student', 'startup', 'admin').optional(), // Admin can set any role
+    role: Joi.string().valid('individual', 'student', 'startup', 'admin').optional(),
     isVerified: Joi.boolean().optional(),
     phoneNumber: Joi.string().pattern(/^(\+|00)[1-9]\d{1,14}$/).optional().messages({'string.pattern.base': 'Phone number must be a valid international format (e.g., +12345678900)'}),
     settings: Joi.object({
         theme: Joi.string().valid('light', 'dark', 'system').optional(),
         timezone: Joi.string().optional(),
     }).optional().unknown(true),
+    googleCalendar: Joi.object({
+        accessToken: Joi.string().optional(),
+        refreshToken: Joi.string().optional(),
+        calendarId: Joi.string().optional(),
+        lastSync: dateSchema.optional(),
+    }).optional().unknown(true),
+    gmail: Joi.object({
+        connected: Joi.boolean().optional(),
+        lastSync: dateSchema.optional(),
+        historyId: Joi.string().optional(),
+    }).optional().unknown(true),
+    slack: Joi.object({
+        accessToken: Joi.string().optional(),
+        teamId: Joi.string().optional(),
+        userId: Joi.string().optional(),
+        botUserId: Joi.string().optional(),
+        scope: Joi.string().optional(),
+        lastSync: dateSchema.optional(),
+    }).optional().unknown(true),
+    // notion removed
+    // microsoftTeams removed
     password: Joi.forbidden(),
     verificationToken: Joi.forbidden(),
     verificationTokenExpires: Joi.forbidden()
 });
 
 // --- Task Schemas ---
-const taskReminderSchema = Joi.object({ // New sub-schema for task reminders
+const taskReminderSchema = Joi.object({
     time: dateSchema.required(),
     method: Joi.string().valid('email', 'app_notification', 'sms').default('app_notification').optional(),
-    isSent: Joi.boolean().default(false).optional() // isSent can be sent by client to reset if needed
+    isSent: Joi.boolean().default(false).optional()
 });
 
 const taskSchema = Joi.object({
@@ -81,7 +113,7 @@ const taskSchema = Joi.object({
     tags: Joi.array().items(Joi.string().trim()).optional(),
     project: JoiObjectId.objectId().optional().allow(null),
     assignedTo: JoiObjectId.objectId().optional(),
-    reminders: Joi.array().items(taskReminderSchema).optional(), // Use new sub-schema
+    reminders: Joi.array().items(taskReminderSchema).optional(),
 });
 
 const updateTaskSchema = Joi.object({
@@ -93,11 +125,11 @@ const updateTaskSchema = Joi.object({
     tags: Joi.array().items(Joi.string().trim()).optional(),
     project: JoiObjectId.objectId().optional().allow(null),
     assignedTo: JoiObjectId.objectId().optional(),
-    reminders: Joi.array().items(taskReminderSchema).optional(), // Use new sub-schema
+    reminders: Joi.array().items(taskReminderSchema).optional(),
 }).min(1);
 
 // --- Event Schemas ---
-const eventReminderSchema = Joi.object({ // New sub-schema for event reminders
+const eventReminderSchema = Joi.object({
     time: dateSchema.required(),
     method: Joi.string().valid('email', 'app_notification', 'sms').default('app_notification').optional(),
     isSent: Joi.boolean().default(false).optional()
@@ -112,7 +144,7 @@ const eventSchema = Joi.object({
     allDay: Joi.boolean().default(false).optional(),
     category: Joi.string().valid('meeting', 'appointment', 'personal', 'study', 'workout', 'other').default('meeting').optional(),
     attendees: Joi.array().items(Joi.string().email()).optional(),
-    reminders: Joi.array().items(eventReminderSchema).optional(), // Use new sub-schema
+    reminders: Joi.array().items(eventReminderSchema).optional(),
 });
 
 const updateEventSchema = Joi.object({
@@ -124,7 +156,7 @@ const updateEventSchema = Joi.object({
     allDay: Joi.boolean().optional(),
     category: Joi.string().valid('meeting', 'appointment', 'personal', 'study', 'workout', 'other').optional(),
     attendees: Joi.array().items(Joi.string().email()).optional(),
-    reminders: Joi.array().items(eventReminderSchema).optional(), // Use new sub-schema
+    reminders: Joi.array().items(eventReminderSchema).optional(),
 }).min(1);
 
 // --- Message Schemas (Omnia Communicator) ---
@@ -167,7 +199,7 @@ const generateDraftSchema = Joi.object({
 });
 
 // --- Goal Schemas (Omnia Coach) ---
-const goalReminderSchema = Joi.object({ // New sub-schema for goal reminders
+const goalReminderSchema = Joi.object({
     time: dateSchema.required(),
     message: Joi.string().required(),
     method: Joi.string().valid('email', 'app_notification', 'sms').default('app_notification').optional(),
@@ -182,7 +214,7 @@ const goalSchema = Joi.object({
     progress: Joi.number().min(0).max(100).default(0).optional(),
     status: Joi.string().valid('active', 'completed', 'overdue', 'cancelled', 'on_hold').default('active').optional(),
     relatedTasks: Joi.array().items(JoiObjectId.objectId()).optional(),
-    reminders: Joi.array().items(goalReminderSchema).optional(), // Use new sub-schema
+    reminders: Joi.array().items(goalReminderSchema).optional(),
 });
 
 const updateGoalSchema = Joi.object({
@@ -193,7 +225,7 @@ const updateGoalSchema = Joi.object({
     progress: Joi.number().min(0).max(100).optional(),
     status: Joi.string().valid('active', 'completed', 'overdue', 'cancelled', 'on_hold').optional(),
     relatedTasks: Joi.array().items(JoiObjectId.objectId()).optional(),
-    reminders: Joi.array().items(goalReminderSchema).optional(), // Use new sub-schema
+    reminders: Joi.array().items(goalReminderSchema).optional(),
 }).min(1);
 
 // --- Learning Resource Schemas (Omnia Coach) ---
@@ -225,7 +257,7 @@ const projectSchema = Joi.object({
     description: Joi.string().max(1000).optional(),
     startDate: dateSchema.optional(),
     endDate: dateSchema.optional().greater(Joi.ref('startDate')),
-    status: Joi.string().valid('planning', 'in-progress', 'completed', 'on-hold', 'cancelled').default('planning').optional(),
+    status: Joi.string().valid('planning', 'in-progress', 'completed', 'on_hold', 'cancelled').default('planning').optional(),
     priority: Joi.string().valid('low', 'medium', 'high', 'urgent').default('medium').optional(),
     tags: Joi.array().items(Joi.string().trim()).optional(),
 });
@@ -235,7 +267,7 @@ const updateProjectSchema = Joi.object({
     description: Joi.string().max(1000).optional(),
     startDate: dateSchema.optional(),
     endDate: dateSchema.optional().greater(Joi.ref('startDate')),
-    status: Joi.string().valid('planning', 'in-progress', 'completed', 'on-hold', 'cancelled').optional(),
+    status: Joi.string().valid('planning', 'in-progress', 'completed', 'on_hold', 'cancelled').optional(),
     priority: Joi.string().valid('low', 'medium', 'high', 'urgent').optional(),
     tags: Joi.array().items(Joi.string().trim()).optional(),
 }).min(1);
@@ -314,6 +346,31 @@ const wellnessSuggestionSchema = Joi.object({
     customContext: Joi.string().optional(),
 });
 
+// --- Integrations Schemas (Slack) ---
+const slackMessageSchema = Joi.object({
+    channelId: Joi.string().required().description('Slack channel ID (e.g., C01234ABCD) or user ID for DM (e.g., U01234ABCD).'),
+    text: Joi.string().min(1).max(3000).required().description('The message content to send.'),
+    options: Joi.object().optional().unknown(true).description('Optional additional Slack API chat.postMessage parameters.'),
+});
+
+const summarizeSlackChannelSchema = Joi.object({
+    channelId: Joi.string().required().description('Slack channel ID to summarize.'),
+    count: Joi.number().min(1).max(100).default(50).optional().description('Number of recent messages to fetch.'),
+});
+
+// --- Integrations Schemas (Gmail) ---
+const summarizeGmailInboxSchema = Joi.object({
+    maxResults: Joi.number().min(1).max(50).default(10).optional().description('Maximum number of recent emails to fetch and summarize.'),
+});
+
+const sendGmailDraftSchema = Joi.object({
+    to: Joi.string().required().pattern(/^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-1]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))(,\s*(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-1]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))})*$/)
+        .message('{{#label}} must be a valid comma-separated list of email addresses.').description('Recipient email address(es) (comma-separated for multiple).'),
+    subject: Joi.string().required().description('Subject of the email.'),
+    bodyText: Joi.string().required().description('Plain text content of the email.'),
+    replyToMessageId: Joi.string().optional().description('Optional. Gmail message ID to reply to (for threading).'),
+});
+
 
 /**
  * @function validate
@@ -325,12 +382,11 @@ const wellnessSuggestionSchema = Joi.object({
 const validate = (schema, property = 'body') => (req, res, next) => {
   const { error, value } = schema.validate(req[property], {
     abortEarly: false, // Return all errors found
-    allowUnknown: false, // Disallow unknown properties
+    allowUnknown: false, // Disallow unknown properties (strict validation)
   });
 
   if (error) {
     res.status(400);
-    // Aggregate all error messages
     const errorMessage = error.details.map((detail) => detail.message).join(', ');
     throw new Error(`Validation Error: ${errorMessage}`);
   }
@@ -389,4 +445,12 @@ module.exports = {
   validateCreateWellnessRecord: validate(wellnessRecordSchema),
   validateUpdateWellnessRecord: validate(updateWellnessRecordSchema),
   validateWellnessSuggestion: validate(wellnessSuggestionSchema),
+
+  // Integrations validation
+  validateSlackMessage: validate(slackMessageSchema),
+  validateSummarizeSlackChannel: validate(summarizeSlackChannelSchema),
+  // notion removed
+  // microsoftTeams removed
+  validateSummarizeGmailInbox: validate(summarizeGmailInboxSchema),
+  validateSendGmailDraft: validate(sendGmailDraftSchema),
 };

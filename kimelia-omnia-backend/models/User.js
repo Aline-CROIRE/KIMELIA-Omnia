@@ -52,6 +52,72 @@ const crypto = require('crypto');
  *           description: User's phone number for SMS notifications (e.g., +15551234567).
  *           example: "+250788123456"
  *           nullable: true
+ *         googleCalendar:
+ *           type: object
+ *           properties:
+ *             accessToken:
+ *               type: string
+ *               description: Google Calendar API access token.
+ *               writeOnly: true
+ *             refreshToken:
+ *               type: string
+ *               description: Google Calendar API refresh token.
+ *               writeOnly: true
+ *             calendarId:
+ *               type: string
+ *               description: The primary Google Calendar ID being synced.
+ *               example: "primary"
+ *             lastSync:
+ *               type: string
+ *               format: date-time
+ *               description: Timestamp of the last successful synchronization.
+ *           description: Google Calendar integration settings and tokens.
+ *           nullable: true
+ *         gmail:
+ *           type: object
+ *           properties:
+ *             connected:
+ *               type: boolean
+ *               default: false
+ *               description: Flag indicating if Gmail is connected.
+ *             lastSync:
+ *               type: string
+ *               format: date-time
+ *               description: Timestamp of the last successful Gmail synchronization.
+ *             historyId:
+ *               type: string
+ *               description: The last Gmail history ID used for incremental sync.
+ *           description: Gmail integration settings and sync status.
+ *           nullable: true
+ *         slack:
+ *           type: object
+ *           properties:
+ *             accessToken:
+ *               type: string
+ *               description: Slack Bot User OAuth Token (xoxb-).
+ *               writeOnly: true
+ *             teamId:
+ *               type: string
+ *               description: The Slack team ID associated with this integration.
+ *               example: "T012A3C4D5E"
+ *             userId:
+ *               type: string
+ *               description: The Slack user ID who authorized the integration (their bot user ID).
+ *               example: "U012B3C4D5F"
+ *             botUserId:
+ *               type: string
+ *               description: The bot user ID for this app in the workspace.
+ *               example: "B012C3D4E5G"
+ *             scope:
+ *               type: string
+ *               description: The scopes granted to the bot token.
+ *               example: "app_mentions:read,chat:write,commands,users:read"
+ *             lastSync:
+ *               type: string
+ *               format: date-time
+ *               description: Timestamp of the last successful synchronization.
+ *           description: Slack integration settings and tokens.
+ *           nullable: true
  *         verificationToken:
  *           type: string
  *           description: Unique token used for email verification. This field is hidden from API responses.
@@ -122,12 +188,33 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-    phoneNumber: { // New field for SMS
+    phoneNumber: {
         type: String,
         match: [/^(\+|00)[1-9]\d{1,14}$/, 'Please enter a valid international phone number (e.g., +12345678900)'],
         trim: true,
-        sparse: true, // Allows null/undefined to be unique
+        sparse: true,
     },
+    googleCalendar: {
+        accessToken: { type: String, select: false },
+        refreshToken: { type: String, select: false },
+        calendarId: String,
+        lastSync: Date,
+    },
+    gmail: {
+        connected: { type: Boolean, default: false },
+        lastSync: Date,
+        historyId: String,
+    },
+    slack: {
+        accessToken: { type: String, select: false },
+        teamId: String,
+        userId: String,
+        botUserId: String,
+        scope: String,
+        lastSync: Date,
+    },
+    // Notion integration removed
+    // Microsoft Teams integration removed
     verificationToken: String,
     verificationTokenExpires: Date,
     settings: {
