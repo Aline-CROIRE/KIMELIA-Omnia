@@ -17,15 +17,11 @@ const {
   sendSlackMessage,
   summarizeSlackChannelDiscussion,
   disconnectSlackIntegration,
-  // Notion removed
-  // Microsoft Teams removed
 } = require('../controllers/integrationController');
 const { protect } = require('../middleware/authMiddleware');
 const {
     validateSlackMessage,
     validateSummarizeSlackChannel,
-    // Notion validation schemas removed
-    // Microsoft Teams validation schemas removed
     validateSummarizeGmailInbox,
     validateSendGmailDraft,
 } = require('../middleware/validationMiddleware');
@@ -35,13 +31,9 @@ const router = express.Router();
  * @swagger
  * tags:
  *   - name: Integrations (Google Services)
- *     description: Generic API for integrating KIMELIA Omnia with Google Calendar and Gmail.
  *   - name: Integrations (Google Calendar)
- *     description: Specific API endpoints for Google Calendar functionalities.
  *   - name: Integrations (Gmail)
- *     description: Specific API endpoints for Gmail functionalities (read, summarize, send).
  *   - name: Integrations (Slack)
- *     description: API for integrating KIMELIA Omnia with Slack for messaging and channel summaries.
  */
 
 // --- Google General OAuth Routes (for Calendar & Gmail) ---
@@ -291,11 +283,226 @@ router.post('/gmail/send-draft', protect, validateSendGmailDraft, sendGmailDraft
 
 
 // --- Slack Specific Routes ---
+
+/**
+ * @swagger
+ * /integrations/slack/auth:
+ *   get:
+ *     summary: Initiate Slack OAuth2 authorization.
+ *     description: Directs the user to Slack's consent screen to authorize KIMELIA Omnia to access their Slack workspace. The backend will then handle the callback.
+ *     tags: [Integrations (Slack)]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Returns the Slack authorization URL to which the frontend should redirect.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean, example: true }
+ *                 message: { type: string, example: "Redirect to Slack for authorization." }
+ *                 authUrl: { type: string, example: "https://slack.com/oauth/v2/authorize?client_id=YOUR_CLIENT_ID&scope=chat:write,channels:read&redirect_uri=http://localhost:5000/api/v1/integrations/slack/callback&state=60d0fe4f5b5f7e001c0d3a7b" }
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       500:
+ *         $ref: '#/components/responses/ServerError'
+ */
 router.get('/slack/auth', protect, initiateSlackAuth);
-router.get('/slack/callback', slackAuthCallback);
+
+/**
+ * @swagger
+ * /integrations/slack/callback:
+ *   get:
+ *     summary: Slack OAuth2 callback handler (Internal).
+ *     description: This endpoint is for Slack to redirect to after user authorization. It should not be called directly by the frontend. It exchanges the authorization code for tokens and redirects to the frontend with success/error status.
+ *     tags: [Integrations (Slack)]
+ *     parameters:
+ *       - in: query
+ *         name: code
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: The authorization code from Slack.
+ *       - in: query
+ *         name: state
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: The Omnia user ID passed during initiation.
+ *       - in: query
+ *         name: error
+ *         schema:
+ *           type: string
+ *         required: false
+ *         description: Error message from Slack if authorization failed.
+ *     responses:
+ *       302:
+ *         description: Redirects to frontend `FRONTEND_POST_AUTH_REDIRECT_URL` with `status=success` or `status=error`.
+ *       500:
+ *         description: Should not be reached if redirect works, but included for completeness.
+ */
+router.get('/slack/callback', slackAuthCallback); // Public endpoint for Slack redirect
+
+/**
+ * @swagger
+ * /integrations/slack/channels:
+ *   get:
+ *     summary: Retrieve Slack channels for the authenticated user's workspace.
+ *     description: Fetches a list of public and private channels (that the bot is a member of) from the connected Slack workspace.
+ *     tags: [Integrations (Slack)]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: A list of Slack channels.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean, example: true }
+ *                 count: { type: number, example: 5 }
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id: { type: string, example: "C012A3C4D5E" }
+ *                       name: { type: string, example: "general" }
+ *                       is_channel: { type: boolean, example: true }
+ *                       is_member: { type: boolean, example: true }
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       500:
+ *         $ref: '#/components/responses/ServerError'
+ */
 router.get('/slack/channels', protect, getSlackChannelsForUser);
+
+/**
+ * @swagger
+ * /integrations/slack/send-message:
+ *   post:
+ *     summary: Send a message to a Slack channel or user.
+ *     description: Sends a message to a specified Slack channel ID, public channel name, or direct message user ID.
+ *     tags: [Integrations (Slack)]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [channelId, text]
+ *             properties:
+ *               channelId:
+ *                 type: string
+ *                 description: The Slack channel ID (e.g., `C1234567890`) or user ID for a direct message (e.g., `U1234567890`).
+ *                 example: "C012A3C4D5E"
+ *               text:
+ *                 type: string
+ *                 description: The message content to send.
+ *                 example: "Hello from KIMELIA Omnia! Your task 'Complete Report' is due soon."
+ *               options:
+ *                 type: object
+ *                 description: Optional additional Slack API `chat.postMessage` parameters (e.g., `as_user`, `blocks`).
+ *                 example: {}
+ *     responses:
+ *       200:
+ *         description: Message sent to Slack successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean, example: true }
+ *                 message: { type: string, example: "Message sent to Slack successfully!" }
+ *                 data: { type: object, description: "Slack API response data." }
+ *       400:
+ *         $ref: '#/components/responses/BadRequestError'
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       500:
+ *         $ref: '#/components/responses/ServerError'
+ */
 router.post('/slack/send-message', protect, validateSlackMessage, sendSlackMessage);
+
+/**
+ * @swagger
+ * /integrations/slack/summarize-channel:
+ *   post:
+ *     summary: Summarize recent Slack channel discussion using AI.
+ *     description: Fetches a specified number of recent messages from a Slack channel and uses AI to generate a concise summary.
+ *     tags: [Integrations (Slack)]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [channelId]
+ *             properties:
+ *               channelId:
+ *                 type: string
+ *                 description: The Slack channel ID to summarize (e.g., `C1234567890`).
+ *                 example: "C012A3C4D5E"
+ *               count:
+ *                 type: number
+ *                 description: Optional. Number of recent messages to fetch for summarization (default 50, max 100).
+ *                 minimum: 1
+ *                 maximum: 100
+ *                 example: 20
+ *     responses:
+ *       200:
+ *         description: Slack channel discussion summarized by AI.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean, example: true }
+ *                 message: { type: string, example: "Slack channel discussion summarized by AI." }
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     summary: { type: string, example: "Key points discussed: Project Alpha launch plans, need for more resources. Action items for John and Sarah." }
+ *       400:
+ *         $ref: '#/components/responses/BadRequestError'
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       500:
+ *         $ref: '#/components/responses/ServerError'
+ */
 router.post('/slack/summarize-channel', protect, validateSummarizeSlackChannel, summarizeSlackChannelDiscussion);
+
+/**
+ * @swagger
+ * /integrations/slack/disconnect:
+ *   post:
+ *     summary: Disconnect Slack integration.
+ *     description: Clears Slack access tokens and integration details from the user's profile.
+ *     tags: [Integrations (Slack)]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Slack disconnected successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean, example: true }
+ *                 message: { type: string, example: "Slack disconnected successfully." }
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       500:
+ *         $ref: '#/components/responses/ServerError'
+ */
 router.post('/slack/disconnect', protect, disconnectSlackIntegration);
 
 module.exports = router;

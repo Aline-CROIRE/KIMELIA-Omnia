@@ -4,12 +4,12 @@
   "description": "Backend for KIMELIA Omnia AI-driven productivity platform",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "concurrently \"nodemon server.js\" \"npm run open:swagger\"",
+    "start": "cross-env NODE_ENV=production node server.js",
+    "dev": "cross-env NODE_ENV=development concurrently \"nodemon server.js\" \"npm run open:swagger\"",
     "open:swagger": "wait-on http://localhost:5000/api-docs && open-cli http://localhost:5000/api-docs",
-    "test": "jest --detectOpenHandles --forceExit",
-    "test:watch": "jest --watch --detectOpenHandles --forceExit",
-    "test:coverage": "jest --coverage --detectOpenHandles --forceExit"
+    "test": "cross-env NODE_ENV=test jest --detectOpenHandles --forceExit",
+    "test:watch": "cross-env NODE_ENV=test jest --watch --detectOpenHandles --forceExit",
+    "test:coverage": "cross-env NODE_ENV=test jest --coverage --detectOpenHandles --forceExit"
   },
   "keywords": [],
   "author": "KIMELIA Soft",
@@ -21,7 +21,10 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
+    "express-rate-limit": "^8.1.0",
     "googleapis": "^164.1.0",
+    "helmet": "^8.1.0",
+    "hpp": "^0.2.3",
     "joi": "^18.0.1",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.4.1",
@@ -29,11 +32,13 @@
     "openai": "^4.47.1",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.0",
-    "twilio": "^5.10.3"
+    "twilio": "^5.10.3",
+    "xss-clean": "^0.1.4"
   },
   "devDependencies": {
     "@shelf/jest-mongodb": "^5.2.2",
     "concurrently": "^8.2.2",
+    "cross-env": "^10.1.0",
     "jest": "^30.2.0",
     "nodemon": "^3.1.2",
     "open-cli": "^7.0.1",
