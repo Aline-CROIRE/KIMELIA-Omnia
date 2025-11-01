@@ -4,8 +4,7 @@ import { View, Text, TextInput, ActivityIndicator, Alert, ScrollView, ColorValue
 import styled from 'styled-components/native';
 import { useTheme, AppTheme } from '../../contexts/ThemeContext';
 import GradientButton from '../../components/common/GradientButton';
-import KimeliaOmniaLogo from '../../components/logo/KimeliaOmniaLogo';
-// CORRECT: Import useAuth from its new location
+import KIMELIAOmniaLogoRN from '../../components/logo/KIMELIAOmniaLogoRN'; // Corrected logo import
 import { useAuth } from '../../contexts/AuthContext';
 import { RouteProp } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -37,7 +36,7 @@ const Title = styled(Text)<{ theme: AppTheme }>`
 const Subtitle = styled(Text)<{ theme: AppTheme }>`
   font-family: ${(props: { theme: AppTheme }) => props.theme.fonts.secondary};
   font-size: ${(props: { theme: AppTheme }) => props.theme.fontSizes.large}px;
-  color: ${(props: { theme: AppTheme }) => props.theme.colors.textLight}; // Corrected property name
+  color: ${(props: { theme: AppTheme }) => props.theme.colors.textLight};
   text-align: center;
   margin-bottom: ${(props: { theme: AppTheme }) => props.theme.metrics.doubleBaseMargin}px;
   padding-horizontal: ${(props: { theme: AppTheme }) => props.theme.metrics.horizontalPadding}px;
@@ -50,13 +49,13 @@ const StyledTextInput = styled(TextInput)<{ theme: AppTheme }>`
   border-radius: ${(props: { theme: AppTheme }) => props.theme.metrics.borderRadius}px;
   border-width: 1px;
   border-color: ${(props: { theme: AppTheme }) => props.theme.colors.lightGrey};
-  padding-horizontal: ${(props: { theme: AppTheme }) => props.theme.metrics.baseMargin}px;
-  margin-bottom: ${(props: { theme: AppTheme }) => props.theme.metrics.baseMargin}px;
+  /* FIXED: Removed 'px' unit from padding-horizontal and margin-bottom */
+  padding-horizontal: ${(props: { theme: AppTheme }) => props.theme.metrics.baseMargin};
+  margin-bottom: ${(props: { theme: AppTheme }) => props.theme.metrics.baseMargin};
   font-family: ${(props: { theme: AppTheme }) => props.theme.fonts.secondary};
   font-size: ${(props: { theme: AppTheme }) => props.theme.fontSizes.medium}px;
   color: ${(props: { theme: AppTheme }) => props.theme.colors.text};
-  /* FIX: Removed problematic shadow properties from here */
-  elevation: 1; /* Keep elevation for Android shadow */
+  elevation: 1;
 `;
 
 type VerifyEmailScreenRouteProp = RouteProp<AuthStackParamList, 'VerifyEmail'>;
@@ -99,9 +98,10 @@ const VerifyEmailScreen: React.FC<VerifyEmailScreenProps> = ({ navigation, route
   return (
     <StyledScrollView contentContainerStyle={{ alignItems: 'center' }} theme={theme}>
       <ContentContainer theme={theme}>
-        <KimeliaOmniaLogo iconSize={60} textSize={28} />
+        <KIMELIAOmniaLogoRN iconSize={60} textSize={28} /> {/* Corrected logo import */}
 
         <Title theme={theme}>Verify Your Email</Title>
+        {/* CONFIRMED: Text wrapped. Interpolated string is also correctly handled by Text. */}
         <Subtitle theme={theme}>
           We sent a verification code to {email || 'your email address'}. Please enter it below.
         </Subtitle>
@@ -109,7 +109,7 @@ const VerifyEmailScreen: React.FC<VerifyEmailScreenProps> = ({ navigation, route
         <StyledTextInput
           theme={theme}
           placeholder="Verification Code"
-          placeholderTextColor={theme.colors.textLight as ColorValue} // Corrected property name
+          placeholderTextColor={theme.colors.textLight as ColorValue}
           keyboardType="number-pad"
           autoCapitalize="none"
           value={verificationCode}

@@ -4,8 +4,7 @@ import { View, Text, TextInput, ActivityIndicator, Alert, ScrollView, ColorValue
 import styled from 'styled-components/native';
 import { useTheme, AppTheme } from '../../contexts/ThemeContext';
 import GradientButton from '../../components/common/GradientButton';
-import KimeliaOmniaLogo from '../../components/logo/KimeliaOmniaLogo';
-// CORRECT: Import useAuth from its new location
+import KimeliaOmniaLogoRN from '../../components/logo/KIMELIAOmniaLogoRN';
 import { useAuth } from '../../contexts/AuthContext';
 import { LoginCredentials } from '../../types/auth';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -50,19 +49,13 @@ const StyledTextInput = styled(TextInput)<{ theme: AppTheme }>`
   border-radius: ${(props: { theme: AppTheme }) => props.theme.metrics.borderRadius}px;
   border-width: 1px;
   border-color: ${(props: { theme: AppTheme }) => props.theme.colors.lightGrey};
+  /* FIXED: Re-introduced 'px' unit for padding-horizontal and margin-bottom */
   padding-horizontal: ${(props: { theme: AppTheme }) => props.theme.metrics.baseMargin}px;
   margin-bottom: ${(props: { theme: AppTheme }) => props.theme.metrics.baseMargin}px;
   font-family: ${(props: { theme: AppTheme }) => props.theme.fonts.secondary};
   font-size: ${(props: { theme: AppTheme }) => props.theme.fontSizes.medium}px;
   color: ${(props: { theme: AppTheme }) => props.theme.colors.text};
-  /* CRITICAL FIX: Removed problematic shadow properties from here to resolve CssSyntaxError */
-  elevation: 1; /* Keep elevation for Android shadow ONLY IF YOU WANT IT */
-  /* Remove any other shadow-related properties like:
-  shadow-color: ...;
-  shadow-offset: ...;
-  shadow-opacity: ...;
-  shadow-radius: ...;
-  */
+  elevation: 1;
 `;
 
 interface LoginScreenProps extends NativeStackScreenProps<AuthStackParamList, 'Login'> {
@@ -101,7 +94,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation, onLoginSuccess })
   return (
     <StyledScrollView contentContainerStyle={{ alignItems: 'center' }} theme={theme}>
       <ContentContainer theme={theme}>
-        <KimeliaOmniaLogo iconSize={70} textSize={32} showTagline={true} />
+        <KimeliaOmniaLogoRN iconSize={70} textSize={32} showTagline={true} />
 
         <Title theme={theme}>Welcome Back!</Title>
         <Subtitle theme={theme}>Login to your KIMELIA Omnia account.</Subtitle>

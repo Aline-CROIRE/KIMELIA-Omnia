@@ -4,9 +4,11 @@ import { createNativeStackNavigator, NativeStackScreenProps } from '@react-navig
 import LoginScreen from '../screens/auth/LoginScreen';
 import RegisterScreen from '../screens/auth/RegisterScreen';
 import VerifyEmailScreen from '../screens/auth/VerifyEmailScreen';
+import WelcomeScreen from '../screens/auth/WelcomeScreen'; // Import the new WelcomeScreen
 import { useTheme } from '../contexts/ThemeContext';
 
 export type AuthStackParamList = {
+  Welcome: undefined;
   Login: undefined;
   Register: undefined;
   VerifyEmail: { email: string };
@@ -23,12 +25,13 @@ const AuthNavigator: React.FC<AuthNavigatorProps> = ({ onAuthenticate }) => {
 
   return (
     <AuthStack.Navigator
+      initialRouteName="Welcome"
       screenOptions={{
         headerShown: false,
         contentStyle: { backgroundColor: theme.colors.background },
       }}
     >
-      {/* CORRECTED: Using render prop pattern */}
+      <AuthStack.Screen name="Welcome" component={WelcomeScreen} />
       <AuthStack.Screen name="Login">
         {(props: NativeStackScreenProps<AuthStackParamList, 'Login'>) =>
           <LoginScreen {...props} onLoginSuccess={onAuthenticate} />
