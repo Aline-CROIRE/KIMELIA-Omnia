@@ -1,19 +1,16 @@
 // src/navigation/index.tsx
 import React, { useState, createContext, useContext, ReactNode, useMemo, useEffect, useCallback } from 'react';
 import { NavigationContainer, Theme as NavigationTheme, DefaultTheme } from '@react-navigation/native';
-import { View, Text, StyleSheet } from 'react-native'; // Ensure Text and StyleSheet are imported
+import { View, Text, StyleSheet } from 'react-native'; // Ensure Text is imported
 import AuthNavigator from './AuthNavigator';
 import MainAppNavigator from './MainAppNavigator';
 import { useTheme } from '../contexts/ThemeContext';
-import KimeliaOmniaLogo from '../components/logo/KimeliaOmniaLogo';
-// Correct import path for AuthProvider and useAuth
+import KIMELIAOmniaLogoRN from '../components/logo/KIMELIAOmniaLogoRN';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 
 const AppNavigation: React.FC = () => {
   const { isAuthenticated, isLoading, logout } = useAuth();
   const theme = useTheme();
-
-  // console.log('AppNavigation - Rendering. isAuthenticated:', isAuthenticated, 'isLoading:', isLoading);
 
   const customNavigationTheme: NavigationTheme = {
     ...DefaultTheme,
@@ -29,11 +26,10 @@ const AppNavigation: React.FC = () => {
   };
 
   if (isLoading) {
-    // console.log('AppNavigation - Displaying loading screen.');
     return (
       <View style={[StyleSheet.absoluteFillObject, { backgroundColor: theme.colors.background, alignItems: 'center', justifyContent: 'center' }]}>
-        <KimeliaOmniaLogo iconSize={80} textSize={36} showTagline={true} />
-        {/* CONFIRMED: This text is correctly wrapped in <Text> */}
+        <KIMELIAOmniaLogoRN iconSize={80} textSize={36} showTagline={true} />
+        {/* CONFIRMED: Text wrapped */}
         <Text style={{ marginTop: theme.metrics.doubleBaseMargin, fontFamily: theme.fonts.secondary, color: theme.colors.textLight }}>
           Loading your world...
         </Text>
@@ -41,7 +37,6 @@ const AppNavigation: React.FC = () => {
     );
   }
 
-  // console.log('AppNavigation - Loading finished. isAuthenticated:', isAuthenticated);
   return (
     <NavigationContainer theme={customNavigationTheme}>
       {isAuthenticated ? (

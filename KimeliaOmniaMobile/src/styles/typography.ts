@@ -1,18 +1,21 @@
 // src/styles/typography.ts
+// Defines the font families and sizes used throughout the application.
+
 import { Platform } from 'react-native';
 
 export const fonts = {
-  // Use the names provided by expo-google-fonts
+  // Primary font (e.g., Poppins) for headings, titles, and key UI elements
   primary: Platform.select({
-    ios: 'Poppins_400Regular', // Standard weight for body text
+    ios: 'Poppins_400Regular', // Standard weight
     android: 'Poppins_400Regular',
     default: 'Poppins_400Regular',
   }),
   primaryBold: Platform.select({
-    ios: 'Poppins_700Bold', // Bold weight for headers/logo
+    ios: 'Poppins_700Bold', // Bold weight for emphasis
     android: 'Poppins_700Bold',
     default: 'Poppins_700Bold',
   }),
+  // Secondary font (e.g., Lato) for body text and descriptive content
   secondary: Platform.select({
     ios: 'Lato_400Regular',
     android: 'Lato_400Regular',
@@ -23,22 +26,21 @@ export const fonts = {
     android: 'Lato_700Bold',
     default: 'Lato_700Bold',
   }),
+  // Specific font for the logo text
   logo: Platform.select({
-    ios: 'Poppins_700Bold', // Using bold Poppins for logo as specified earlier
+    ios: 'Poppins_700Bold',
     android: 'Poppins_700Bold',
     default: 'Poppins_700Bold',
   }),
-  // You can also add Nunito Sans or Inter if needed for specific elements
-  // nunito: Platform.select({ ios: 'NunitoSans_400Regular', android: 'NunitoSans_400Regular', default: 'NunitoSans_400Regular' }),
-  // inter: Platform.select({ ios: 'Inter_400Regular', android: 'Inter_400Regular', default: 'Inter_400Regular' }),
+  // Add other font weights/styles as needed (e.g., 'Poppins_500Medium')
 };
 
 export const fontSizes = {
-  tiny: 10,
-  small: 12,
-  regular: 14,
-  medium: 16,
-  large: 18,
-  xl: 24,
-  xxl: 32,
+  tiny: 10,     // Smallest text (e.g., captions, helper text)
+  small: 12,    // Small text (e.g., labels, fine print)
+  regular: 14,  // Standard body text size
+  medium: 16,   // Slightly larger body text or subheadings
+  large: 18,    // Medium headings or prominent text
+  xl: 24,       // Large headings
+  xxl: 32,      // Extra-large headings (e.g., screen titles)
 };

@@ -4,16 +4,16 @@ import { View, Text, ActivityIndicator } from 'react-native';
 import styled from 'styled-components/native';
 import { useTheme, AppTheme } from '../../contexts/ThemeContext';
 import GradientButton from '../../components/common/GradientButton';
-import KimeliaOmniaLogo from '../../components/logo/KimeliaOmniaLogo';
+import KIMELIAOmniaLogoRN from '../../components/logo/KIMELIAOmniaLogoRN';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { MainAppStackParamList } from '../../navigation/MainAppNavigator';
 
-// Define styled components with explicit theme typing
 const StyledContainer = styled(View)<{ theme: AppTheme }>`
   flex: 1;
   align-items: center;
   justify-content: center;
-  padding-horizontal: ${(props: { theme: AppTheme }) => props.theme.metrics.horizontalPadding}px;
+  /* FIXED: Removed 'px' unit from padding */
+  padding-horizontal: ${(props: { theme: AppTheme }) => props.theme.metrics.horizontalPadding};
   background-color: ${(props: { theme: AppTheme }) => props.theme.colors.backgroundLight};
 `;
 
@@ -49,7 +49,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onLogout }) => {
 
   return (
     <StyledContainer theme={theme}>
-      <KimeliaOmniaLogo iconSize={50} textSize={24} showTagline={false} style={{ marginBottom: theme.metrics.doubleBaseMargin }} />
+      <KIMELIAOmniaLogoRN iconSize={50} textSize={24} showTagline={false} style={{ marginBottom: theme.metrics.doubleBaseMargin }} />
 
       <Title theme={theme}>Welcome to KIMELIA Omnia Dashboard!</Title>
       <Subtitle theme={theme}>Your World, Organized Intelligently.</Subtitle>
