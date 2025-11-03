@@ -1,11 +1,12 @@
 const asyncHandler = require('../utils/asyncHandler');
 const User = require('../models/User');
+const { Types } = require('mongoose'); // Import Mongoose Types for ObjectId validation
+
 
 // @desc    Get all users (Admin Only)
 // @route   GET /api/v1/admin/users
 // @access  Private/Admin
 const getAllUsers = asyncHandler(async (req, res) => {
-  // Find all users and select specific fields, excluding sensitive ones like password or verification tokens
   const users = await User.find().select('-password -verificationToken -verificationTokenExpires');
 
   res.status(200).json({
@@ -19,6 +20,13 @@ const getAllUsers = asyncHandler(async (req, res) => {
 // @route   GET /api/v1/admin/users/:id
 // @access  Private/Admin
 const getUserById = asyncHandler(async (req, res) => {
+  // --- NEW: Manual validation for ID ---
+  if (!Types.ObjectId.isValid(req.params.id)) {
+    res.status(400);
+    throw new Error('Invalid User ID format.');
+  }
+  // --- END NEW VALIDATION ---
+
   const user = await User.findById(req.params.id).select('-password -verificationToken -verificationTokenExpires');
 
   if (!user) {
@@ -36,36 +44,36 @@ const getUserById = asyncHandler(async (req, res) => {
 // @route   PUT /api/v1/admin/users/:id
 // @access  Private/Admin
 const updateUser = asyncHandler(async (req, res) => {
-    const { name, email, role, isVerified, settings } = req.body; // Password changes handled separately or via another dedicated route
+    // --- NEW: Manual validation for ID ---
+    if (!Types.ObjectId.isValid(req.params.id)) {
+      res.status(400);
+      throw new Error('Invalid User ID format.');
+    }
+    // --- END NEW VALIDATION ---
 
-    // Prevent admin from accidentally changing their own role to something non-admin via this route,
-    // or from setting their own user to non-admin without careful consideration.
-    // Also prevent setting a verification token.
+    const { name, email, role, isVerified, settings } = req.body;
+
     const updates = {
       name,
       email,
-      role, // Admin can change roles
-      isVerified, // Admin can manually verify users
+      role,
+      isVerified,
       settings,
     };
 
-    // Remove undefined values to prevent overwriting with null
     Object.keys(updates).forEach(key => updates[key] === undefined && delete updates[key]);
 
-    // Special handling for password updates (if included, hash it) - for now, omit from this route for security
     if (req.body.password) {
         res.status(400);
         throw new Error('Password cannot be updated via this route. Use a dedicated password reset/change endpoint.');
     }
-    // Also prevent admin from setting verification token fields directly
     delete updates.verificationToken;
     delete updates.verificationTokenExpires;
 
-
     const user = await User.findByIdAndUpdate(req.params.id, updates, {
-        new: true, // Return updated document
-        runValidators: true, // Run Mongoose validators
-    }).select('-password -verificationToken -verificationTokenExpires'); // Exclude sensitive info
+        new: true,
+        runValidators: true,
+    }).select('-password -verificationToken -verificationTokenExpires');
 
     if (!user) {
         res.status(404);
@@ -83,6 +91,13 @@ const updateUser = asyncHandler(async (req, res) => {
 // @route   DELETE /api/v1/admin/users/:id
 // @access  Private/Admin
 const deleteUser = asyncHandler(async (req, res) => {
+  // --- NEW: Manual validation for ID ---
+  if (!Types.ObjectId.isValid(req.params.id)) {
+    res.status(400);
+    throw new Error('Invalid User ID format.');
+  }
+  // --- END NEW VALIDATION ---
+
   const user = await User.findById(req.params.id);
 
   if (!user) {
@@ -90,7 +105,6 @@ const deleteUser = asyncHandler(async (req, res) => {
     throw new Error('User not found for deletion.');
   }
 
-  // Prevent admin from deleting themselves (or require special confirmation)
   if (req.user._id.toString() === req.params.id.toString()) {
     res.status(400);
     throw new Error('Admin cannot delete their own account via this route.');

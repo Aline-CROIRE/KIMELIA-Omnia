@@ -2,6 +2,7 @@ const Joi = require('joi');
 const { Types } = require('mongoose');
 
 // Custom Joi extension for ObjectId validation
+// This custom extension will still be useful for ObjectIds passed in request bodies (e.g., project IDs in taskSchema)
 const JoiObjectId = Joi.extend((joi) => ({
   type: 'objectId',
   base: joi.string(),
@@ -17,7 +18,9 @@ const JoiObjectId = Joi.extend((joi) => ({
 }));
 
 // --- Common Schemas ---
-const idSchema = JoiObjectId.objectId().required();
+// Re-adding idSchema here to satisfy adminRoutes.js, but its actual validation will be done in controller
+// The .hex().length(24) are still good descriptive checks
+const idSchema = JoiObjectId.objectId().hex().length(24).required();
 
 const dateSchema = Joi.date().iso(); // ISO 8601 date format
 
@@ -380,6 +383,11 @@ const sendGmailDraftSchema = Joi.object({
  * @returns {Function} Express middleware.
  */
 const validate = (schema, property = 'body') => (req, res, next) => {
+  console.log(`[Validation Middleware] Validating property '${property}':`, req[property]);
+  if (property === 'params') {
+    console.log(`[Validation Middleware] req.params.id: ${req.params.id}, type: ${typeof req.params.id}`);
+  }
+
   const { error, value } = schema.validate(req[property], {
     abortEarly: false, // Return all errors found
     allowUnknown: false, // Disallow unknown properties (strict validation)
@@ -397,7 +405,7 @@ const validate = (schema, property = 'body') => (req, res, next) => {
 
 module.exports = {
   // Common validation
-  validateId: validate(idSchema, 'params'),
+  validateId: validate(idSchema, 'params'), // Re-added here to satisfy adminRoutes
 
   // Auth validation
   validateRegister: validate(registerSchema),

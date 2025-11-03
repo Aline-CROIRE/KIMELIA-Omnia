@@ -1,8 +1,8 @@
-
-
 const asyncHandler = require('../utils/asyncHandler');
 const Task = require('../models/Task');
 const Project = require('../models/Project'); // Import Project model
+const { Types } = require('mongoose'); // Import Mongoose Types for ObjectId validation
+
 
 // @desc    Get all tasks for the authenticated user (optionally filtered by project)
 // @route   GET /api/v1/tasks
@@ -14,7 +14,7 @@ const getTasks = asyncHandler(async (req, res) => {
   if (status) query.status = status;
   if (priority) query.priority = priority;
   if (tag) query.tags = { $in: [tag] };
-  if (projectId) query.project = projectId; // Filter by project ID
+  if (projectId) query.project = projectId;
   if (search) {
       query.$or = [
           { title: { $regex: search, $options: 'i' } },
@@ -35,6 +35,13 @@ const getTasks = asyncHandler(async (req, res) => {
 // @route   GET /api/v1/tasks/:id
 // @access  Private
 const getTask = asyncHandler(async (req, res) => {
+  // --- NEW: Manual validation for ID ---
+  if (!Types.ObjectId.isValid(req.params.id)) {
+    res.status(400);
+    throw new Error('Invalid Task ID format.');
+  }
+  // --- END NEW VALIDATION ---
+
   const task = await Task.findById(req.params.id);
 
   if (!task) {
@@ -64,14 +71,12 @@ const createTask = asyncHandler(async (req, res) => {
       throw new Error('Please provide at least a title, status, and priority for the task.');
   }
 
-  // Validate if a project ID is provided and if it exists and user has access
   if (req.body.project) {
       const project = await Project.findById(req.body.project);
       if (!project) {
           res.status(404);
           throw new Error('Project not found for this task.');
       }
-      // Ensure user is owner or member of the project they're linking tasks to
       const isOwner = project.owner.toString() === req.user._id.toString();
       const isMember = project.members.some(member => member.toString() === req.user._id.toString());
       if (!isOwner && !isMember) {
@@ -93,6 +98,13 @@ const createTask = asyncHandler(async (req, res) => {
 // @route   PUT /api/v1/tasks/:id
 // @access  Private
 const updateTask = asyncHandler(async (req, res) => {
+  // --- NEW: Manual validation for ID ---
+  if (!Types.ObjectId.isValid(req.params.id)) {
+    res.status(400);
+    throw new Error('Invalid Task ID format.');
+  }
+  // --- END NEW VALIDATION ---
+
   let task = await Task.findById(req.params.id);
 
   if (!task) {
@@ -105,10 +117,9 @@ const updateTask = asyncHandler(async (req, res) => {
     throw new Error('Not authorized to update this task.');
   }
 
-  delete req.body.user; // Prevent changing task ownership
+  delete req.body.user;
 
-  // Validate if a project ID is updated and if it exists and user has access
-  if (req.body.project && req.body.project.toString() !== task.project?.toString()) { // Only validate if project is changing
+  if (req.body.project && req.body.project.toString() !== task.project?.toString()) {
       const project = await Project.findById(req.body.project);
       if (!project) {
           res.status(404);
@@ -121,7 +132,6 @@ const updateTask = asyncHandler(async (req, res) => {
           throw new Error('Not authorized to link tasks to this project.');
       }
   }
-
 
   task = await Task.findByIdAndUpdate(req.params.id, req.body, {
     new: true,
@@ -139,6 +149,13 @@ const updateTask = asyncHandler(async (req, res) => {
 // @route   DELETE /api/v1/tasks/:id
 // @access  Private
 const deleteTask = asyncHandler(async (req, res) => {
+  // --- NEW: Manual validation for ID ---
+  if (!Types.ObjectId.isValid(req.params.id)) {
+    res.status(400);
+    throw new Error('Invalid Task ID format.');
+  }
+  // --- END NEW VALIDATION ---
+
   const task = await Task.findById(req.params.id);
 
   if (!task) {
