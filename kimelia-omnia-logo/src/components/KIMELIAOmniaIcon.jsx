@@ -1,6 +1,6 @@
 // src/components/KIMELIAOmniaIcon.jsx
-import React, { useId } from 'react'; // Import useId
-import styled, { keyframes } from 'styled-components'; // No need for 'css' helper here, as animations are on styled components
+import React, { useId } from 'react'; 
+import styled, { keyframes } from 'styled-components'; 
 import { colors } from '../theme';
 
 const IconWrapper = styled.div`
@@ -57,7 +57,7 @@ const KIMELIAOmniaIcon = ({ size }) => {
   const gradientPurpleTealId = `${uniquePrefix}-gradientPurpleTeal`;
   const gradientTealPurpleId = `${uniquePrefix}-gradientTealPurple`;
   const gradientBrightAccentId = `${uniquePrefix}-gradientBrightAccent`;
-  const titleId = `${uniquePrefix}-kimeliaOmniaIconTitle`; // Also make title ID unique
+  const titleId = `${uniquePrefix}-kimeliaOmniaIconTitle`; 
 
   return (
     <IconWrapper size={size}>
@@ -67,10 +67,10 @@ const KIMELIAOmniaIcon = ({ size }) => {
         viewBox="0 0 100 100"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
-        aria-labelledby={titleId} // Use the unique title ID
+        aria-labelledby={titleId} 
         role="img"
       >
-        <title id={titleId}>KIMELIA Omnia Icon: The Evolving Flow</title> {/* Use the unique title ID */}
+        <title id={titleId}>KIMELIA Omnia Icon: The Evolving Flow</title>
         <defs>
           {/* Gradients using unique IDs */}
           <linearGradient id={gradientPurpleTealId} x1="0%" y1="0%" x2="100%" y2="100%">
