@@ -4,7 +4,7 @@ const { Types } = require('mongoose');
 // Custom Joi extension for ObjectId validation
 const JoiObjectId = Joi.extend((joi) => ({
   type: 'objectId',
-  base: joi.string(),
+  base: joi.string(), // Ensure the base is a string
   messages: {
     'objectId.invalid': '{{#label}} must be a valid MongoDB ObjectId',
   },
@@ -17,7 +17,11 @@ const JoiObjectId = Joi.extend((joi) => ({
 }));
 
 // --- Common Schemas ---
-const idSchema = JoiObjectId.objectId().required();
+// UPDATED: Make idSchema more explicit with Joi's built-in hex and length checks
+const idSchema = JoiObjectId.objectId().hex().length(24).required();
+// The .hex().length(24) ensures it's a 24-character hexadecimal string,
+// and JoiObjectId.objectId() then applies the mongoose.Types.ObjectId.isValid check.
+// This double-checking should catch any subtle parsing issues.
 
 const dateSchema = Joi.date().iso(); // ISO 8601 date format
 
