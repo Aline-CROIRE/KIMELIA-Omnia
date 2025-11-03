@@ -5,7 +5,7 @@ const { Types } = require('mongoose');
 // This custom extension will still be useful for ObjectIds passed in request bodies (e.g., project IDs in taskSchema)
 const JoiObjectId = Joi.extend((joi) => ({
   type: 'objectId',
-  base: joi.string(),
+  base: joi.string(), // Ensure the base is a string
   messages: {
     'objectId.invalid': '{{#label}} must be a valid MongoDB ObjectId',
   },
