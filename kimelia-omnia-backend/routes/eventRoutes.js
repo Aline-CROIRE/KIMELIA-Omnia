@@ -1,4 +1,3 @@
-
 const express = require('express');
 const {
   getEvents,
@@ -9,7 +8,7 @@ const {
 } = require('../controllers/eventController');
 const { protect } = require('../middleware/authMiddleware');
 const {
-    validateId, // For event ID in params
+    // validateId is REMOVED here from import
     validateCreateEvent,
     validateUpdateEvent
 } = require('../middleware/validationMiddleware');
@@ -243,8 +242,9 @@ router.route('/')
  *         $ref: '#/components/responses/ServerError'
  */
 router.route('/:id')
-    .get(validateId, getEvent)
-    .put(validateId, validateUpdateEvent, updateEvent)
-    .delete(validateId, deleteEvent);
+    // REMOVED .all() debugging middleware
+    .get(getEvent) // validateId is removed
+    .put(validateUpdateEvent, updateEvent) // validateId is removed
+    .delete(deleteEvent); // validateId is removed
 
 module.exports = router;

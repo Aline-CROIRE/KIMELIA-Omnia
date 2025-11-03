@@ -1,4 +1,3 @@
-
 const express = require('express');
 const {
   getTasks,
@@ -9,7 +8,7 @@ const {
 } = require('../controllers/taskController');
 const { protect } = require('../middleware/authMiddleware');
 const {
-    validateId, // For task ID in params
+    // validateId is REMOVED here from import
     validateCreateTask,
     validateUpdateTask
 } = require('../middleware/validationMiddleware');
@@ -272,8 +271,9 @@ router.route('/')
  *         $ref: '#/components/responses/ServerError'
  */
 router.route('/:id')
-    .get(validateId, getTask)
-    .put(validateId, validateUpdateTask, updateTask)
-    .delete(validateId, deleteTask);
+    // REMOVED .all() debugging middleware
+    .get(getTask) // validateId is removed
+    .put(validateUpdateTask, updateTask) // validateId is removed
+    .delete(deleteTask); // validateId is removed
 
 module.exports = router;
