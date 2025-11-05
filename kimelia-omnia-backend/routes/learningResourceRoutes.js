@@ -9,7 +9,7 @@ const {
 } = require('../controllers/learningResourceController');
 const { protect } = require('../middleware/authMiddleware');
 const {
-    // validateId is REMOVED from import
+    
     validateCreateLearningResource,
     validateUpdateLearningResource
 } = require('../middleware/validationMiddleware'); // Path to your validation middleware

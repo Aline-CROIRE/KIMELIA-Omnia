@@ -2,18 +2,13 @@ const Joi = require('joi');
 const { Types } = require('mongoose');
 
 // Custom Joi extension for ObjectId validation
-// RESTORED: 'base: joi.string()'
-// This is correct for validating ObjectIds that are part of a request BODY,
-// where Joi's string base validation is desired.
 const JoiObjectId = Joi.extend((joi) => ({
   type: 'objectId',
-  base: joi.string(), // RESTORED
+  base: joi.string(),
   messages: {
     'objectId.invalid': '{{#label}} must be a valid MongoDB ObjectId',
   },
   validate(value, helpers) {
-    // This runs AFTER Joi's base string validation has confirmed 'value' is a string.
-    // console.log(`[JoiObjectId.validate] Incoming value (after base string check): '${value}', Type: ${typeof value}`); // Keep for debugging if needed
     if (!Types.ObjectId.isValid(value)) {
       return { value, errors: helpers.error('objectId.invalid') };
     }
@@ -22,9 +17,7 @@ const JoiObjectId = Joi.extend((joi) => ({
 }));
 
 // --- Common Schemas ---
-// idSchema is still valid for use in other schemas (e.g., relatedGoal, project) within request bodies.
-const idSchema = JoiObjectId.objectId().hex().length(24).required();
-
+const idSchema = JoiObjectId.objectId().hex().length(24).required(); // Keep for use in request bodies
 const dateSchema = Joi.date().iso(); // ISO 8601 date format
 
 // --- Auth Schemas ---
@@ -102,17 +95,18 @@ const adminUpdateUserSchema = Joi.object({
 // --- Task Schemas ---
 const taskReminderSchema = Joi.object({
     time: dateSchema.required(),
+    message: Joi.string().optional().allow(''),
     method: Joi.string().valid('email', 'app_notification', 'sms').default('app_notification').optional(),
     isSent: Joi.boolean().default(false).optional()
 });
 
 const taskSchema = Joi.object({
     title: Joi.string().min(3).max(200).required(),
-    description: Joi.string().max(1000).optional(),
+    description: Joi.string().max(1000).optional().allow(''),
     dueDate: dateSchema.optional(),
     status: Joi.string().valid('pending', 'in-progress', 'completed', 'deferred', 'cancelled').default('pending').required(),
     priority: Joi.string().valid('low', 'medium', 'high', 'urgent').default('medium').required(),
-    tags: Joi.array().items(Joi.string().trim()).optional(),
+    tags: Joi.array().items(Joi.string().trim().min(1).max(50)).optional(),
     project: JoiObjectId.objectId().optional().allow(null),
     assignedTo: JoiObjectId.objectId().optional(),
     reminders: Joi.array().items(taskReminderSchema).optional(),
@@ -120,11 +114,11 @@ const taskSchema = Joi.object({
 
 const updateTaskSchema = Joi.object({
     title: Joi.string().min(3).max(200).optional(),
-    description: Joi.string().max(1000).optional(),
+    description: Joi.string().max(1000).optional().allow(''),
     dueDate: dateSchema.optional(),
     status: Joi.string().valid('pending', 'in-progress', 'completed', 'deferred', 'cancelled').optional(),
     priority: Joi.string().valid('low', 'medium', 'high', 'urgent').optional(),
-    tags: Joi.array().items(Joi.string().trim()).optional(),
+    tags: Joi.array().items(Joi.string().trim().min(1).max(50)).optional(),
     project: JoiObjectId.objectId().optional().allow(null),
     assignedTo: JoiObjectId.objectId().optional(),
     reminders: Joi.array().items(taskReminderSchema).optional(),
@@ -133,13 +127,14 @@ const updateTaskSchema = Joi.object({
 // --- Event Schemas ---
 const eventReminderSchema = Joi.object({
     time: dateSchema.required(),
+    message: Joi.string().optional().allow(''),
     method: Joi.string().valid('email', 'app_notification', 'sms').default('app_notification').optional(),
     isSent: Joi.boolean().default(false).optional()
 });
 
 const eventSchema = Joi.object({
     title: Joi.string().min(3).max(200).required(),
-    description: Joi.string().max(1000).optional(),
+    description: Joi.string().max(1000).optional().allow(''),
     location: Joi.string().max(200).optional(),
     startTime: dateSchema.required(),
     endTime: dateSchema.required().greater(Joi.ref('startTime')),
@@ -151,7 +146,7 @@ const eventSchema = Joi.object({
 
 const updateEventSchema = Joi.object({
     title: Joi.string().min(3).max(200).optional(),
-    description: Joi.string().max(1000).optional(),
+    description: Joi.string().max(1000).optional().allow(''),
     location: Joi.string().max(200).optional(),
     startTime: dateSchema.optional(),
     endTime: dateSchema.optional().greater(Joi.ref('startTime')),
@@ -168,7 +163,7 @@ const messageSchema = Joi.object({
     content: Joi.string().min(10).max(5000).required(),
     source: Joi.string().valid('manual', 'AI_generated', 'gmail', 'slack', 'other').default('manual').optional(),
     externalReferenceId: Joi.string().optional(),
-    tags: Joi.array().items(Joi.string().trim()).optional(),
+    tags: Joi.array().items(Joi.string().trim().min(1).max(50)).optional(),
     status: Joi.string().valid('read', 'unread', 'archived', 'deleted', 'pending_send', 'sent').default('unread').optional(),
     scheduledSendTime: dateSchema.optional(),
     relatedTask: JoiObjectId.objectId().optional(),
@@ -181,7 +176,7 @@ const updateMessageSchema = Joi.object({
     content: Joi.string().min(10).max(5000).optional(),
     source: Joi.string().valid('manual', 'AI_generated', 'gmail', 'slack', 'other').optional(),
     externalReferenceId: Joi.string().optional(),
-    tags: Joi.array().items(Joi.string().trim()).optional(),
+    tags: Joi.array().items(Joi.string().trim().min(1).max(50)).optional(),
     status: Joi.string().valid('read', 'unread', 'archived', 'deleted', 'pending_send', 'sent').optional(),
     scheduledSendTime: dateSchema.optional(),
     relatedTask: JoiObjectId.objectId().optional(),
@@ -261,22 +256,33 @@ const updateLearningResourceSchema = Joi.object({
 // --- Project Schemas (Omnia Workspace) ---
 const projectSchema = Joi.object({
     title: Joi.string().min(5).max(200).required(),
-    description: Joi.string().max(1000).optional(),
+    description: Joi.string().max(1000).optional().allow(''),
     startDate: dateSchema.optional(),
     endDate: dateSchema.optional().greater(Joi.ref('startDate')),
-    status: Joi.string().valid('planning', 'in-progress', 'completed', 'on_hold', 'cancelled').default('planning').optional(),
+    status: Joi.string().valid('planning', 'in-progress', 'completed', 'on_hold', 'cancelled').default('planning').required(),
     priority: Joi.string().valid('low', 'medium', 'high', 'urgent').default('medium').optional(),
-    tags: Joi.array().items(Joi.string().trim()).optional(),
+    members: Joi.array().items(JoiObjectId.objectId()).optional(),
+    tags: Joi.array().items(Joi.string().trim().min(1).max(50)).optional(),
+    files: Joi.array().items(Joi.object({
+      name: Joi.string().required(),
+      url: Joi.string().uri().required(),
+      uploadedAt: dateSchema.optional().default(Joi.ref('$now'))
+    })).optional(),
 });
 
 const updateProjectSchema = Joi.object({
     title: Joi.string().min(5).max(200).optional(),
-    description: Joi.string().max(1000).optional(),
+    description: Joi.string().max(1000).optional().allow(''),
     startDate: dateSchema.optional(),
     endDate: dateSchema.optional().greater(Joi.ref('startDate')),
     status: Joi.string().valid('planning', 'in-progress', 'completed', 'on_hold', 'cancelled').optional(),
     priority: Joi.string().valid('low', 'medium', 'high', 'urgent').optional(),
-    tags: Joi.array().items(Joi.string().trim()).optional(),
+    tags: Joi.array().items(Joi.string().trim().min(1).max(50)).optional(),
+    files: Joi.array().items(Joi.object({
+      name: Joi.string().optional(),
+      url: Joi.string().uri().optional(),
+      uploadedAt: dateSchema.optional()
+    })).optional(),
 }).min(1);
 
 const addRemoveMemberSchema = Joi.object({
@@ -285,23 +291,23 @@ const addRemoveMemberSchema = Joi.object({
 
 // --- Expense Schemas (Omnia Finance) ---
 const expenseSchema = Joi.object({
-    description: Joi.string().min(3).max(200).optional(),
+    description: Joi.string().min(3).max(200).optional().allow(''),
     amount: Joi.number().min(0.01).required(),
     category: Joi.string().valid('food', 'transport', 'housing', 'utilities', 'entertainment', 'shopping', 'education', 'health', 'work', 'bills', 'savings', 'other').required(),
     date: dateSchema.required(),
-    tags: Joi.array().items(Joi.string().trim()).optional(),
+    tags: Joi.array().items(Joi.string().trim().min(1).max(50)).optional(),
     paymentMethod: Joi.string().valid('cash', 'credit_card', 'debit_card', 'bank_transfer', 'mobile_money', 'other').default('other').optional(),
-    receiptUrl: Joi.string().uri().optional(),
+    receiptUrl: Joi.string().uri().optional().allow(null, ''),
 });
 
 const updateExpenseSchema = Joi.object({
-    description: Joi.string().min(3).max(200).optional(),
+    description: Joi.string().min(3).max(200).optional().allow(''),
     amount: Joi.number().min(0.01).optional(),
     category: Joi.string().valid('food', 'transport', 'housing', 'utilities', 'entertainment', 'shopping', 'education', 'health', 'work', 'bills', 'savings', 'other').optional(),
     date: dateSchema.optional(),
-    tags: Joi.array().items(Joi.string().trim()).optional(),
+    tags: Joi.array().items(Joi.string().trim().min(1).max(50)).optional(),
     paymentMethod: Joi.string().valid('cash', 'credit_card', 'debit_card', 'bank_transfer', 'mobile_money', 'other').optional(),
-    receiptUrl: Joi.string().uri().optional(),
+    receiptUrl: Joi.string().uri().optional().allow(null, ''),
 }).min(1);
 
 // --- Budget Schemas (Omnia Finance) ---
@@ -328,7 +334,7 @@ const wellnessRecordSchema = Joi.object({
     type: Joi.string().valid('break', 'meal', 'exercise', 'mindfulness', 'sleep', 'water_intake', 'custom').required(),
     date: dateSchema.required(),
     durationMinutes: Joi.number().min(1).optional(),
-    details: Joi.string().max(500).optional(),
+    details: Joi.string().max(500).optional().allow(''),
     intensity: Joi.string().valid('low', 'medium', 'high').optional(),
     moodBefore: Joi.string().valid('stressed', 'neutral', 'happy', 'tired', 'motivated', 'anxious').optional(),
     moodAfter: Joi.string().valid('stressed', 'neutral', 'happy', 'tired', 'motivated', 'anxious').optional(),
@@ -340,7 +346,7 @@ const updateWellnessRecordSchema = Joi.object({
     type: Joi.string().valid('break', 'meal', 'exercise', 'mindfulness', 'sleep', 'water_intake', 'custom').optional(),
     date: dateSchema.optional(),
     durationMinutes: Joi.number().min(1).optional(),
-    details: Joi.string().max(500).optional(),
+    details: Joi.string().max(500).optional().allow(''),
     intensity: Joi.string().valid('low', 'medium', 'high').optional(),
     moodBefore: Joi.string().valid('stressed', 'neutral', 'happy', 'tired', 'motivated', 'anxious').optional(),
     moodAfter: Joi.string().valid('stressed', 'neutral', 'happy', 'tired', 'motivated', 'anxious').optional(),
@@ -413,10 +419,7 @@ const validate = (schema, property = 'body') => (req, res, next) => {
 };
 
 module.exports = {
-  // Common validation
-  // validateId is NO LONGER EXPORTED, as per your Task/Event routes
-  // No explicit validateId function exported for route parameter validation,
-  // relying on controller-level Types.ObjectId.isValid instead for :id routes.
+
 
   // Auth validation
   validateRegister: validate(registerSchema),
@@ -457,8 +460,8 @@ module.exports = {
   validateUpdateExpense: validate(updateExpenseSchema),
 
   // Budget validation
-  validateCreateBudget: validate(budgetSchema),
-  validateUpdateBudget: validate(updateBudgetSchema),
+  validateCreateBudget: validate(budgetSchema), // Now defined
+  validateUpdateBudget: validate(updateBudgetSchema), // Now defined
 
   // Wellness validation
   validateCreateWellnessRecord: validate(wellnessRecordSchema),

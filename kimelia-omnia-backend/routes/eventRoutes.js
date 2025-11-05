@@ -8,7 +8,7 @@ const {
 } = require('../controllers/eventController');
 const { protect } = require('../middleware/authMiddleware');
 const {
-    // validateId is REMOVED here from import
+    
     validateCreateEvent,
     validateUpdateEvent
 } = require('../middleware/validationMiddleware');
@@ -242,9 +242,9 @@ router.route('/')
  *         $ref: '#/components/responses/ServerError'
  */
 router.route('/:id')
-    // REMOVED .all() debugging middleware
-    .get(getEvent) // validateId is removed
-    .put(validateUpdateEvent, updateEvent) // validateId is removed
-    .delete(deleteEvent); // validateId is removed
+
+    .get(getEvent) 
+    .put(validateUpdateEvent, updateEvent) 
+    .delete(deleteEvent); 
 
 module.exports = router;

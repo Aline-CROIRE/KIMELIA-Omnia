@@ -9,7 +9,7 @@ const {
 } = require('../controllers/budgetController');
 const { protect } = require('../middleware/authMiddleware');
 const {
-    validateId, // For budget ID in params
+
     validateCreateBudget,
     validateUpdateBudget
 } = require('../middleware/validationMiddleware');
@@ -244,9 +244,9 @@ router.route('/')
  *         $ref: '#/components/responses/ServerError'
  */
 router.route('/:id')
-    .get(validateId, getBudget)
-    .put(validateId, validateUpdateBudget, updateBudget)
-    .delete(validateId, deleteBudget);
+    .get(getBudget)
+    .put(validateUpdateBudget, updateBudget)
+    .delete(deleteBudget);
 
 module.exports = router;
 

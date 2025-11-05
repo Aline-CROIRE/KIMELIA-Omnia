@@ -1,5 +1,7 @@
 const asyncHandler = require('../utils/asyncHandler');
 const Expense = require('../models/Expense');
+const { Types } = require('mongoose'); // --- NEW: Import Mongoose Types for ObjectId validation ---
+
 
 // @desc    Get all expenses for the authenticated user
 // @route   GET /api/v1/expenses
@@ -38,6 +40,13 @@ const getExpenses = asyncHandler(async (req, res) => {
 // @route   GET /api/v1/expenses/:id
 // @access  Private
 const getExpense = asyncHandler(async (req, res) => {
+  // --- NEW: Manual validation for ID, matching other controllers ---
+  if (!Types.ObjectId.isValid(req.params.id)) {
+    res.status(400);
+    throw new Error('Invalid Expense ID format.');
+  }
+  // --- END NEW VALIDATION ---
+
   const expense = await Expense.findById(req.params.id);
 
   if (!expense) {
@@ -81,6 +90,13 @@ const createExpense = asyncHandler(async (req, res) => {
 // @route   PUT /api/v1/expenses/:id
 // @access  Private
 const updateExpense = asyncHandler(async (req, res) => {
+  // --- NEW: Manual validation for ID, matching other controllers ---
+  if (!Types.ObjectId.isValid(req.params.id)) {
+    res.status(400);
+    throw new Error('Invalid Expense ID format.');
+  }
+  // --- END NEW VALIDATION ---
+
   let expense = await Expense.findById(req.params.id);
 
   if (!expense) {
@@ -112,6 +128,13 @@ const updateExpense = asyncHandler(async (req, res) => {
 // @route   DELETE /api/v1/expenses/:id
 // @access  Private
 const deleteExpense = asyncHandler(async (req, res) => {
+  // --- NEW: Manual validation for ID, matching other controllers ---
+  if (!Types.ObjectId.isValid(req.params.id)) {
+    res.status(400);
+    throw new Error('Invalid Expense ID format.');
+  }
+  // --- END NEW VALIDATION ---
+
   const expense = await Expense.findById(req.params.id);
 
   if (!expense) {

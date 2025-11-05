@@ -1,4 +1,3 @@
-
 const express = require('express');
 const {
   getExpenses,
@@ -9,10 +8,10 @@ const {
 } = require('../controllers/expenseController');
 const { protect } = require('../middleware/authMiddleware');
 const {
-    validateId, // For expense ID in params
+  
     validateCreateExpense,
     validateUpdateExpense
-} = require('../middleware/validationMiddleware');
+} = require('../middleware/validationMiddleware'); // Path to your validation middleware
 const router = express.Router();
 
 /**
@@ -249,8 +248,10 @@ router.route('/')
  *         $ref: '#/components/responses/ServerError'
  */
 router.route('/:id')
-    .get(validateId, getExpense)
-    .put(validateId, validateUpdateExpense, updateExpense)
-    .delete(validateId, deleteExpense);
+    // No Joi validation middleware for ':id' parameter here,
+    // relying on controller-level Types.ObjectId.isValid checks
+    .get(getExpense)
+    .put(validateUpdateExpense, updateExpense)
+    .delete(deleteExpense);
 
 module.exports = router;

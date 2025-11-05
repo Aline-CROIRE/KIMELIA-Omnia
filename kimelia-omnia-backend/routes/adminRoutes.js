@@ -1,15 +1,14 @@
-
 const express = require('express');
 const {
+  getAdminData,
   getAllUsers,
   getUserById,
   updateUser,
   deleteUser,
 } = require('../controllers/adminController');
-const { protect, authorizeRoles } = require('../middleware/authMiddleware');
+const { protect, authorizeRoles } = require('../middleware/authMiddleware'); // --- UPDATED: Import 'authorizeRoles' ---
 const {
-    validateId, // For user ID in params
-    validateAdminUpdateUser // For user update by admin
+    validateAdminUpdateUser
 } = require('../middleware/validationMiddleware');
 const router = express.Router();
 
@@ -21,7 +20,7 @@ const router = express.Router();
  */
 
 // Apply protect middleware and ensure user has 'admin' role for all admin routes
-router.use(protect, authorizeRoles('admin'));
+router.use(protect, authorizeRoles('admin')); // --- UPDATED: Use 'authorizeRoles' ---
 
 /**
  * @swagger
@@ -204,8 +203,11 @@ router.route('/users')
  *         $ref: '#/components/responses/ServerError'
  */
 router.route('/users/:id')
-    .get(validateId, getUserById)
-    .put(validateId, validateAdminUpdateUser, updateUser)
-    .delete(validateId, deleteUser);
+    .get(getUserById)
+    .put(validateAdminUpdateUser, updateUser)
+    .delete(deleteUser);
+
+router.route('/auth/admin-data') // Path for admin-specific data
+    .get(getAdminData);
 
 module.exports = router;

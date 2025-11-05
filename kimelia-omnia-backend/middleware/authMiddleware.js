@@ -1,5 +1,4 @@
-
-    const jwt = require('jsonwebtoken');
+const jwt = require('jsonwebtoken');
     const asyncHandler = require('../utils/asyncHandler');
     const User = require('../models/User');
 
@@ -59,7 +58,7 @@
      * @returns {Function} An Express middleware function.
      * @throws {Error} 403 Forbidden if user's role is not authorized.
      */
-    const authorizeRoles = (...roles) => {
+    const authorizeRoles = (...roles) => { // --- RESTORED to 'authorizeRoles' ---
       return (req, res, next) => {
         // Ensure user is authenticated and has a role
         if (!req.user || !req.user.role) {
@@ -76,6 +75,4 @@
       };
     };
 
-    module.exports = { protect, authorizeRoles };
-
-    
+    module.exports = { protect, authorizeRoles }; // --- EXPORT 'authorizeRoles' ---

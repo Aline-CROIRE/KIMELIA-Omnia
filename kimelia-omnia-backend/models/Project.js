@@ -9,7 +9,6 @@ const mongoose = require('mongoose');
  *       required:
  *         - owner
  *         - title
- *         - status
  *       properties:
  *         _id:
  *           type: string
@@ -18,19 +17,19 @@ const mongoose = require('mongoose');
  *           example: 60d0fe4f5b5f7e001c0d3a83
  *         owner:
  *           type: string
- *           description: The ID of the user who owns/created this project.
+ *           description: The ID of the user who owns this project.
  *           readOnly: true
  *           example: 60d0fe4f5b5f7e001c0d3a7b
  *         title:
  *           type: string
- *           description: The title or name of the project.
+ *           description: The title of the project.
  *           minLength: 5
  *           maxLength: 200
  *           example: Q4 Marketing Campaign
  *         description:
  *           type: string
- *           description: Detailed description of the project scope, goals, and objectives.
- *           example: Develop and execute a comprehensive marketing campaign for the Q4 product launch.
+ *           description: A detailed description of the project.
+ *           example: Plan and execute a multi-channel marketing campaign for Q4 product launch.
  *           nullable: true
  *         startDate:
  *           type: string
@@ -46,7 +45,7 @@ const mongoose = require('mongoose');
  *           example: 2024-12-31T23:59:59.000Z
  *         status:
  *           type: string
- *           enum: [planning, in-progress, completed, on-hold, cancelled]
+ *           enum: [planning, in-progress, completed, on_hold, cancelled]
  *           default: planning
  *           description: The current status of the project.
  *           example: in-progress
@@ -58,24 +57,26 @@ const mongoose = require('mongoose');
  *           example: high
  *         members:
  *           type: array
- *           description: A list of User IDs of team members collaborating on this project.
  *           items:
  *             type: string
- *             description: User ID of a project member.
- *             example: 60d0fe4f5b5f7e001c0d3a7e
+ *           description: List of user IDs who are members of this project.
+ *           example: ["60d0fe4f5b5f7e001c0d3a7c", "60d0fe4f5b5f7e001c0d3a7d"]
  *         tags:
  *           type: array
- *           description: Optional tags for categorization (e.g., marketing, product, internal).
  *           items:
  *             type: string
- *             example: "marketing"
+ *           description: Optional tags for categorization.
+ *           example: [marketing, launch, team]
  *         files:
  *           type: array
- *           description: A list of IDs representing files associated with the project.
  *           items:
- *             type: string
- *             description: ID of an associated file.
- *             example: "file_id_1"
+ *             type: object
+ *             properties:
+ *               name: { type: string, example: "Brief.pdf" }
+ *               url: { type: string, format: url, example: "https://example.com/brief.pdf" }
+ *               uploadedAt: { type: string, format: "date-time" }
+ *           description: List of attached files.
+ *           example: [{ name: "Budget.xlsx", url: "http://example.com/budget.xlsx", uploadedAt: "2024-09-20T10:00:00.000Z" }]
  *         createdAt:
  *           type: string
  *           format: date-time
@@ -111,10 +112,11 @@ const projectSchema = new mongoose.Schema(
     },
     endDate: {
       type: Date,
+      // Custom validation for endDate greater than startDate can be done in controller/Joi
     },
     status: {
       type: String,
-      enum: ['planning', 'in-progress', 'completed', 'on-hold', 'cancelled'],
+      enum: ['planning', 'in-progress', 'completed', 'on_hold', 'cancelled'],
       default: 'planning',
     },
     priority: {
@@ -136,21 +138,24 @@ const projectSchema = new mongoose.Schema(
     ],
     files: [
       {
-        type: String,
-      }
-    ]
+        name: { type: String, required: true },
+        url: { type: String, required: true },
+        uploadedAt: { type: Date, default: Date.now },
+      },
+    ],
   },
   {
     timestamps: true,
   }
 );
 
-// Pre-save hook to ensure owner is always a member
-projectSchema.pre('save', function(next) {
-  if (this.owner && !this.members.includes(this.owner)) {
-    this.members.unshift(this.owner);
+// Middleware to ensure endDate is after startDate if both are provided (Mongoose schema level)
+projectSchema.pre('save', function (next) {
+  if (this.startDate && this.endDate && this.startDate >= this.endDate) {
+    next(new Error('Project end date must be after start date.'));
+  } else {
+    next();
   }
-  next();
 });
 
 module.exports = mongoose.model('Project', projectSchema);
