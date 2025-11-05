@@ -9,10 +9,10 @@ const {
 } = require('../controllers/learningResourceController');
 const { protect } = require('../middleware/authMiddleware');
 const {
-    validateId,
+    // validateId is REMOVED from import
     validateCreateLearningResource,
     validateUpdateLearningResource
-} = require('../middleware/validationMiddleware');
+} = require('../middleware/validationMiddleware'); // Path to your validation middleware
 
 const router = express.Router();
 
@@ -25,15 +25,6 @@ const router = express.Router();
 
 // Apply protect middleware to all learning resource routes
 router.use(protect);
-
-// --- NEW DEBUGGING MIDDLEWARE ---
-router.param('id', (req, res, next, id) => {
-  console.log(`[learningResourceRoutes.js] router.param('id'): Raw ID from URL: '${id}', Type: ${typeof id}`);
-  req.params.id = String(id);
-  console.log(`[learningResourceRoutes.js] router.param('id'): Coerced req.params.id: '${req.params.id}', Type: ${typeof req.params.id}`);
-  next();
-});
-// --- END NEW DEBUGGING MIDDLEWARE ---
 
 /**
  * @swagger
@@ -208,9 +199,11 @@ router.route('/')
  *       500: { $ref: '#/components/responses/ServerError' }
  */
 router.route('/:id')
-    .get(validateId, getLearningResource)
-    .put(validateId, validateUpdateLearningResource, updateLearningResource)
-    .delete(validateId, deleteLearningResource);
+    // No Joi validation middleware for ':id' parameter here,
+    // relying on controller-level Types.ObjectId.isValid checks
+    .get(getLearningResource)
+    .put(validateUpdateLearningResource, updateLearningResource)
+    .delete(deleteLearningResource);
 
 /**
  * @swagger

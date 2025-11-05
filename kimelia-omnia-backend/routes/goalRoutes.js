@@ -8,7 +8,7 @@ const {
 } = require('../controllers/goalController');
 const { protect } = require('../middleware/authMiddleware');
 const {
-    validateId, // For goal ID in params
+    // validateId is REMOVED from import, as per your Task/Event routes
     validateCreateGoal,
     validateUpdateGoal
 } = require('../middleware/validationMiddleware');
@@ -23,17 +23,6 @@ const router = express.Router();
 
 // Apply protect middleware to all goal routes
 router.use(protect);
-
-// --- NEW DEBUGGING MIDDLEWARE ---
-router.param('id', (req, res, next, id) => {
-  console.log(`[goalRoutes.js] router.param('id'): Raw ID from URL: '${id}', Type: ${typeof id}`);
-  // If 'id' somehow comes as non-string, try to coerce it here, though it should be string by default
-  req.params.id = String(id);
-  console.log(`[goalRoutes.js] router.param('id'): Coerced req.params.id: '${req.params.id}', Type: ${typeof req.params.id}`);
-  next();
-});
-// --- END NEW DEBUGGING MIDDLEWARE ---
-
 
 /**
  * @swagger
@@ -258,8 +247,10 @@ router.route('/')
  *         $ref: '#/components/responses/ServerError'
  */
 router.route('/:id')
-    .get(validateId, getGoal)
-    .put(validateId, validateUpdateGoal, updateGoal)
-    .delete(validateId, deleteGoal);
+    // No Joi validation middleware for ':id' parameter here,
+    // relying on controller-level Types.ObjectId.isValid checks
+    .get(getGoal)
+    .put(validateUpdateGoal, updateGoal)
+    .delete(deleteGoal);
 
 module.exports = router;

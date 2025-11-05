@@ -1,7 +1,7 @@
-
 const asyncHandler = require('../utils/asyncHandler');
 const LearningResource = require('../models/LearningResource');
-const { getMotivationalTip } = require('../services/aiService'); // We'll add this to aiService.js soon
+const { Types } = require('mongoose'); // Import Mongoose Types for ObjectId validation
+const { getMotivationalTip } = require('../services/aiService'); // Ensure this is implemented or mocked
 
 // --- Learning Resource CRUD ---
 
@@ -15,7 +15,13 @@ const getLearningResources = asyncHandler(async (req, res) => {
   if (type) query.type = type;
   if (category) query.category = category;
   if (tag) query.tags = { $in: [tag] };
+  // --- IMPORTANT: Ensure relatedGoal is a valid ObjectId if present in query ---
+  if (relatedGoal && !Types.ObjectId.isValid(relatedGoal)) {
+      res.status(400);
+      throw new Error('Invalid relatedGoal ID format in query.');
+  }
   if (relatedGoal) query.relatedGoal = relatedGoal;
+  // --- END IMPORTANT ---
   if (search) {
       query.$or = [
           { title: { $regex: search, $options: 'i' } },
@@ -36,6 +42,13 @@ const getLearningResources = asyncHandler(async (req, res) => {
 // @route   GET /api/v1/learning-resources/:id
 // @access  Private
 const getLearningResource = asyncHandler(async (req, res) => {
+  // --- NEW: Manual validation for ID, matching other controllers ---
+  if (!Types.ObjectId.isValid(req.params.id)) {
+    res.status(400);
+    throw new Error('Invalid Learning Resource ID format.');
+  }
+  // --- END NEW VALIDATION ---
+
   const resource = await LearningResource.findById(req.params.id);
 
   if (!resource) {
@@ -65,6 +78,12 @@ const createLearningResource = asyncHandler(async (req, res) => {
       res.status(400);
       throw new Error('Please provide at least a title, URL, and type for the learning resource.');
   }
+  // --- IMPORTANT: Validate relatedGoal if present in body ---
+  if (req.body.relatedGoal && !Types.ObjectId.isValid(req.body.relatedGoal)) {
+      res.status(400);
+      throw new Error('Invalid relatedGoal ID format in request body.');
+  }
+  // --- END IMPORTANT ---
 
   const resource = await LearningResource.create(req.body);
 
@@ -79,6 +98,13 @@ const createLearningResource = asyncHandler(async (req, res) => {
 // @route   PUT /api/v1/learning-resources/:id
 // @access  Private
 const updateLearningResource = asyncHandler(async (req, res) => {
+  // --- NEW: Manual validation for ID, matching other controllers ---
+  if (!Types.ObjectId.isValid(req.params.id)) {
+    res.status(400);
+    throw new Error('Invalid Learning Resource ID format.');
+  }
+  // --- END NEW VALIDATION ---
+
   let resource = await LearningResource.findById(req.params.id);
 
   if (!resource) {
@@ -92,6 +118,13 @@ const updateLearningResource = asyncHandler(async (req, res) => {
   }
 
   delete req.body.user;
+
+  // --- IMPORTANT: Validate relatedGoal if present in body for update ---
+  if (req.body.relatedGoal && !Types.ObjectId.isValid(req.body.relatedGoal)) {
+      res.status(400);
+      throw new Error('Invalid relatedGoal ID format in request body.');
+  }
+  // --- END IMPORTANT ---
 
   resource = await LearningResource.findByIdAndUpdate(req.params.id, req.body, {
     new: true,
@@ -109,6 +142,13 @@ const updateLearningResource = asyncHandler(async (req, res) => {
 // @route   DELETE /api/v1/learning-resources/:id
 // @access  Private
 const deleteLearningResource = asyncHandler(async (req, res) => {
+  // --- NEW: Manual validation for ID, matching other controllers ---
+  if (!Types.ObjectId.isValid(req.params.id)) {
+    res.status(400);
+    throw new Error('Invalid Learning Resource ID format.');
+  }
+  // --- END NEW VALIDATION ---
+
   const resource = await LearningResource.findById(req.params.id);
 
   if (!resource) {
@@ -136,10 +176,7 @@ const deleteLearningResource = asyncHandler(async (req, res) => {
 // @route   GET /api/v1/coach/motivational-tip
 // @access  Private
 const getMotivationalTipController = asyncHandler(async (req, res) => {
-  // For now, a simple random tip.
-  // In the future, this would call an AI service, possibly passing user's current goals/progress
-  // to get a personalized tip.
-  const tip = await getMotivationalTip(req.user._id); // Pass user ID for potential personalization
+  const tip = await getMotivationalTip(req.user._id);
 
   res.status(200).json({
     success: true,
