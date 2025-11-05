@@ -55,14 +55,8 @@ const getGoal = asyncHandler(async (req, res) => {
 const createGoal = asyncHandler(async (req, res) => {
   req.body.user = req.user._id;
 
-  if (!req.body.title || !req.body.targetDate) {
-      res.status(400);
-      throw new Error('Please provide at least a title and target date for the goal.');
-  }
-  if (new Date(req.body.targetDate) < Date.now()) {
-      res.status(400);
-      throw new Error('Target date cannot be in the past. If goal is overdue, set status directly.');
-  }
+  // Joi schema now handles targetDate.min(new Date()) for create.
+  // No need for explicit check here unless more complex logic is required.
 
   const goal = await Goal.create(req.body);
 
@@ -81,7 +75,7 @@ const updateGoal = asyncHandler(async (req, res) => {
 
   if (!goal) {
     res.status(404);
-    throw new Error('Goal not found.');
+    throw new new Error('Goal not found.');
   }
 
   if (goal.user.toString() !== req.user._id.toString()) {
@@ -91,16 +85,38 @@ const updateGoal = asyncHandler(async (req, res) => {
 
   delete req.body.user; // Prevent changing goal ownership
 
-  // Prevent setting targetDate in past for 'active' goals
-  if (req.body.targetDate && new Date(req.body.targetDate) < Date.now() && req.body.status !== 'completed' && req.body.status !== 'overdue') {
-      res.status(400);
-      throw new Error('Cannot set target date in the past for an active or uncompleted goal.');
+  // --- REFINED TARGET DATE VALIDATION FOR UPDATES ---
+  if (req.body.targetDate) {
+    const newTargetDate = new Date(req.body.targetDate);
+    const now = new Date();
+
+    // If the new target date is in the past
+    if (newTargetDate < now) {
+      // Allow if the goal is already completed or cancelled
+      if (req.body.status === 'completed' || req.body.status === 'cancelled' || goal.status === 'completed' || goal.status === 'cancelled') {
+        // Valid, can update to past date if goal is finished
+      }
+      // Allow if the goal was already overdue AND we are not changing status to active/in-progress
+      else if (newTargetDate < new Date(goal.targetDate) && (goal.status === 'overdue' || goal.status === 'on_hold')) {
+         // Valid, allowing to update an already past target date, for example, to a slightly earlier past date,
+         // or if the status is also updated to overdue/cancelled
+      }
+      else if (req.body.status && (req.body.status === 'active' || req.body.status === 'in-progress')) {
+          res.status(400);
+          throw new Error('Target date cannot be in the past for active or in-progress goals.');
+      }
+      else if (goal.status === 'active' || goal.status === 'in-progress') {
+        res.status(400);
+        throw new Error('Target date cannot be moved to the past for an active or in-progress goal.');
+      }
+    }
   }
+  // --- END REFINED TARGET DATE VALIDATION ---
+
   // Ensure progress is within 0-100 range if provided
   if (req.body.progress !== undefined) {
       req.body.progress = Math.min(100, Math.max(0, req.body.progress));
   }
-
 
   goal = await Goal.findByIdAndUpdate(req.params.id, req.body, {
     new: true,
