@@ -1,4 +1,3 @@
-
 const express = require('express');
 const {
   getLearningResources,
@@ -6,14 +5,15 @@ const {
   createLearningResource,
   updateLearningResource,
   deleteLearningResource,
-  getMotivationalTipController,
-} = require('../controllers/learningResourceController');
+  getMotivationalTipController, // If you want this in this route file
+} = require('../controllers/learningResourceController'); // Ensure this path is correct
 const { protect } = require('../middleware/authMiddleware');
 const {
     validateId, // For resource ID in params
     validateCreateLearningResource,
     validateUpdateLearningResource
-} = require('../middleware/validationMiddleware');
+} = require('../middleware/validationMiddleware'); // Ensure this path is correct
+
 const router = express.Router();
 
 /**
@@ -23,7 +23,7 @@ const router = express.Router();
  *   description: API for managing user's learning materials and fetching motivational tips.
  */
 
-// Apply protect middleware to all routes in this file
+// Apply protect middleware to all learning resource routes
 router.use(protect);
 
 /**
@@ -31,48 +31,31 @@ router.use(protect);
  * /learning-resources:
  *   get:
  *     summary: Retrieve all learning resources for the authenticated user.
- *     description: Fetches a list of all learning resources (articles, videos, courses) belonging to the current user. Supports filtering by type, category, tag, related goal, and text search.
+ *     description: Fetches a list of all learning resources belonging to the current user. Supports filtering and search.
  *     tags: [Learning Resources (Omnia Coach)]
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - in: query
  *         name: type
- *         schema:
- *           type: string
- *           enum: [article, video, course, book, podcast, tool, other]
- *         required: false
- *         description: Optional. Filter resources by their type.
- *         example: video
+ *         schema: { type: string, enum: [article, video, course, book, podcast, tool, other] }
+ *         description: Optional. Filter resources by type.
  *       - in: query
  *         name: category
- *         schema:
- *           type: string
- *           enum: [programming, marketing, finance, design, self-improvement, other]
- *         required: false
- *         description: Optional. Filter resources by their category.
- *         example: programming
+ *         schema: { type: string, enum: [programming, marketing, finance, design, self-improvement, other] }
+ *         description: Optional. Filter resources by category.
  *       - in: query
  *         name: tag
- *         schema:
- *           type: string
- *         required: false
+ *         schema: { type: string }
  *         description: Optional. Filter resources by a specific tag.
- *         example: frontend
  *       - in: query
  *         name: search
- *         schema:
- *           type: string
- *         required: false
+ *         schema: { type: string }
  *         description: Optional. Search for text in resource title or description.
- *         example: "React tutorial"
  *       - in: query
  *         name: relatedGoal
- *         schema:
- *           type: string
- *         required: false
+ *         schema: { type: string }
  *         description: Optional. Filter resources related to a specific goal ID.
- *         example: 60d0fe4f5b5f7e001c0d3a81
  *     responses:
  *       200:
  *         description: A list of learning resources.
@@ -85,15 +68,12 @@ router.use(protect);
  *                 count: { type: number, example: 2 }
  *                 data:
  *                   type: array
- *                   items:
- *                     $ref: '#/components/schemas/LearningResource'
- *       401:
- *         $ref: '#/components/responses/UnauthorizedError'
- *       500:
- *         $ref: '#/components/responses/ServerError'
+ *                   items: { $ref: '#/components/schemas/LearningResource' }
+ *       401: { $ref: '#/components/responses/UnauthorizedError' }
+ *       500: { $ref: '#/components/responses/ServerError' }
  *   post:
  *     summary: Create a new learning resource for the authenticated user.
- *     description: Adds a new learning resource to the user's Omnia Coach. The `user` field is automatically set.
+ *     description: Adds a new learning resource. The `user` field is automatically set.
  *     tags: [Learning Resources (Omnia Coach)]
  *     security:
  *       - bearerAuth: []
@@ -102,20 +82,13 @@ router.use(protect);
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             required: [title, url, type]
+ *             $ref: '#/components/schemas/LearningResource'
  *             properties:
- *               title: { type: string, minLength: 5, maxLength: 300, example: "Advanced CSS Grid Layout" }
- *               description: { type: string, maxLength: 1000, example: "In-depth guide covering responsive design with CSS Grid." }
- *               url: { type: string, format: "url", example: "https://css-tricks.com/snippets/css/a-guide-to-css-grid/" }
- *               type: { type: string, enum: [article, video, course, book, podcast, tool, other], example: "article" }
- *               category: { type: string, enum: [programming, marketing, finance, design, self-improvement, other], example: "design" }
- *               tags: { type: array, items: { type: string }, example: ["css", "frontend", "responsive"] }
- *               relatedGoal: { type: string, description: "Optional ID of a goal this resource helps with.", example: "60d0fe4f5b5f7e001c0d3a81" }
- *               source: { type: string, enum: [manual, AI_suggested, web_scrape, imported], example: "manual" }
+ *               _id: { readOnly: false } # Override readOnly for request body example
+ *               user: { readOnly: false } # Override readOnly for request body example
  *     responses:
  *       201:
- *         description: Learning resource created successfully.
+ *         description: Resource created successfully.
  *         content:
  *           application/json:
  *             schema:
@@ -123,16 +96,12 @@ router.use(protect);
  *               properties:
  *                 success: { type: boolean, example: true }
  *                 message: { type: string, example: "Learning resource created successfully!" }
- *                 data:
- *                   $ref: '#/components/schemas/LearningResource'
- *       400:
- *         $ref: '#/components/responses/BadRequestError'
- *       401:
- *         $ref: '#/components/responses/UnauthorizedError'
- *       500:
- *         $ref: '#/components/responses/ServerError'
+ *                 data: { $ref: '#/components/schemas/LearningResource' }
+ *       400: { $ref: '#/components/responses/BadRequestError' }
+ *       401: { $ref: '#/components/responses/UnauthorizedError' }
+ *       500: { $ref: '#/components/responses/ServerError' }
  */
-router.route('/learning-resources')
+router.route('/')
     .get(getLearningResources)
     .post(validateCreateLearningResource, createLearningResource);
 
@@ -141,67 +110,55 @@ router.route('/learning-resources')
  * /learning-resources/{id}:
  *   get:
  *     summary: Retrieve a single learning resource by its ID.
- *     description: Fetches details of a specific learning resource. The resource must belong to the authenticated user.
+ *     description: Fetches details of a specific learning resource.
  *     tags: [Learning Resources (Omnia Coach)]
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
- *         schema:
- *           type: string
+ *         schema: { type: string }
  *         required: true
- *         description: The ID of the learning resource to retrieve.
+ *         description: The ID of the resource to retrieve.
  *         example: 60d0fe4f5b5f7e001c0d3a82
  *     responses:
  *       200:
- *         description: Learning resource details retrieved successfully.
+ *         description: Resource details retrieved successfully.
  *         content:
  *           application/json:
  *             schema:
  *               type: object
  *               properties:
  *                 success: { type: boolean, example: true }
- *                 data:
- *                   $ref: '#/components/schemas/LearningResource'
- *       401:
- *         $ref: '#/components/responses/UnauthorizedError'
- *       404:
- *         $ref: '#/components/responses/NotFoundError'
- *       500:
- *         $ref: '#/components/responses/ServerError'
+ *                 data: { $ref: '#/components/schemas/LearningResource' }
+ *       401: { $ref: '#/components/responses/UnauthorizedError' }
+ *       404: { $ref: '#/components/responses/NotFoundError' }
+ *       500: { $ref: '#/components/responses/ServerError' }
  *   put:
  *     summary: Update an existing learning resource.
- *     description: Modifies details of an existing learning resource. Only the owner can update it.
+ *     description: Modifies details of an existing learning resource.
  *     tags: [Learning Resources (Omnia Coach)]
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
- *         schema:
- *           type: string
+ *         schema: { type: string }
  *         required: true
- *         description: The ID of the learning resource to update.
+ *         description: The ID of the resource to update.
  *         example: 60d0fe4f5b5f7e001c0d3a82
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             type: object
+ *             $ref: '#/components/schemas/LearningResource'
  *             properties:
- *               title: { type: string, minLength: 5, maxLength: 300, example: "Mastering CSS Grid Layout (Updated)" }
- *               description: { type: string, maxLength: 1000, example: "Updated guide with new responsive patterns." }
- *               url: { type: string, format: "url", example: "https://updated-css-tricks.com/grid" }
- *               type: { type: string, enum: [article, video, course, book, podcast, tool, other], example: "video" }
- *               category: { type: string, enum: [programming, marketing, finance, design, self-improvement, other], example: "programming" }
- *               tags: { type: array, items: { type: string }, example: ["css", "advanced", "tutorial"] }
- *               relatedGoal: { type: string, description: "Optional ID of a goal this resource helps with.", example: "60d0fe4f5b5f7e001c0d3a81" }
- *               source: { type: string, enum: [manual, AI_suggested, web_scrape, imported], example: "manual" }
+ *               _id: { readOnly: false }
+ *               user: { readOnly: false }
  *     responses:
  *       200:
- *         description: Learning resource updated successfully.
+ *         description: Resource updated successfully.
  *         content:
  *           application/json:
  *             schema:
@@ -209,33 +166,27 @@ router.route('/learning-resources')
  *               properties:
  *                 success: { type: boolean, example: true }
  *                 message: { type: string, example: "Learning resource updated successfully!" }
- *                 data:
- *                   $ref: '#/components/schemas/LearningResource'
- *       400:
- *         $ref: '#/components/responses/BadRequestError'
- *       401:
- *         $ref: '#/components/responses/UnauthorizedError'
- *       404:
- *         $ref: '#/components/responses/NotFoundError'
- *       500:
- *         $ref: '#/components/responses/ServerError'
+ *                 data: { $ref: '#/components/schemas/LearningResource' }
+ *       400: { $ref: '#/components/responses/BadRequestError' }
+ *       401: { $ref: '#/components/responses/UnauthorizedError' }
+ *       404: { $ref: '#/components/responses/NotFoundError' }
+ *       500: { $ref: '#/components/responses/ServerError' }
  *   delete:
  *     summary: Delete a learning resource.
- *     description: Removes a learning resource from the user's Omnia Coach. Only the owner can delete it.
+ *     description: Removes a learning resource.
  *     tags: [Learning Resources (Omnia Coach)]
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
- *         schema:
- *           type: string
+ *         schema: { type: string }
  *         required: true
- *         description: The ID of the learning resource to delete.
+ *         description: The ID of the resource to delete.
  *         example: 60d0fe4f5b5f7e001c0d3a82
  *     responses:
  *       200:
- *         description: Learning resource deleted successfully.
+ *         description: Resource deleted successfully.
  *         content:
  *           application/json:
  *             schema:
@@ -243,14 +194,11 @@ router.route('/learning-resources')
  *               properties:
  *                 success: { type: boolean, example: true }
  *                 message: { type: string, example: "Learning resource deleted successfully!" }
- *       401:
- *         $ref: '#/components/responses/UnauthorizedError'
- *       404:
- *         $ref: '#/components/responses/NotFoundError'
- *       500:
- *         $ref: '#/components/responses/ServerError'
+ *       401: { $ref: '#/components/responses/UnauthorizedError' }
+ *       404: { $ref: '#/components/responses/NotFoundError' }
+ *       500: { $ref: '#/components/responses/ServerError' }
  */
-router.route('/learning-resources/:id')
+router.route('/:id')
     .get(validateId, getLearningResource)
     .put(validateId, validateUpdateLearningResource, updateLearningResource)
     .delete(validateId, deleteLearningResource);
@@ -260,13 +208,13 @@ router.route('/learning-resources/:id')
  * /coach/motivational-tip:
  *   get:
  *     summary: Get a motivational tip.
- *     description: Retrieves a motivational tip to inspire and encourage users. Leveraging AI for personalized tips based on user context.
+ *     description: Fetches a motivational tip, potentially personalized.
  *     tags: [Learning Resources (Omnia Coach)]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: A motivational tip retrieved successfully.
+ *         description: A motivational tip.
  *         content:
  *           application/json:
  *             schema:
@@ -276,13 +224,12 @@ router.route('/learning-resources/:id')
  *                 data:
  *                   type: object
  *                   properties:
- *                     tip: { type: string, example: "Believe you can and you're halfway there. Keep pushing towards your goals!" }
- *                     source: { type: string, example: "Omnia Coach AI" }
- *       401:
- *         $ref: '#/components/responses/UnauthorizedError'
- *       500:
- *         $ref: '#/components/responses/ServerError'
+ *                     tip: { type: string, example: "Believe you can and you're halfway there." }
+ *                     source: { type: string, example: "Omnia Coach" }
+ *       401: { $ref: '#/components/responses/UnauthorizedError' }
+ *       500: { $ref: '#/components/responses/ServerError' }
  */
-router.get('/coach/motivational-tip', getMotivationalTipController);
+router.route('/coach/motivational-tip')
+    .get(getMotivationalTipController);
 
 module.exports = router;
