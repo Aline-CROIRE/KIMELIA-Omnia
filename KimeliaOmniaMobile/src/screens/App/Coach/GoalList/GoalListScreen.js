@@ -20,9 +20,9 @@ import {
   ButtonText,
   SubTitle,
   DetailText,
-} from '../../../components/StyledComponents';
-import apiClient from '../../../api/apiClient';
-import { COLORS, GRADIENTS, FONTS } from '../../../constants';
+} from '../../../../components/StyledComponents';
+import apiClient from '../../../../api/apiClient';
+import { COLORS, GRADIENTS, FONTS } from '../../../../constants';
 import { format, isPast, parseISO } from 'date-fns';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 

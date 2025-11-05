@@ -17,9 +17,9 @@ import {
   GradientButtonBackground,
   ButtonText,
   Section,
-} from '../../../components/StyledComponents';
-import apiClient from '../../../api/apiClient';
-import { COLORS, GRADIENTS, FONTS } from '../../../constants';
+} from '../../../../components/StyledComponents';
+import apiClient from '../../../../api/apiClient';
+import { COLORS, GRADIENTS, FONTS } from '../../../../constants';
 import { format, parseISO, isPast } from 'date-fns';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
