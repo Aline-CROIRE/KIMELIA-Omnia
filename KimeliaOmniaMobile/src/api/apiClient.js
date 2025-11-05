@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { API_BASE_URL } from './constants'; // Assuming constants.js is in the parent directory
+import { API_BASE_URL } from '../constants/index'; 
 import AsyncStorage from '@react-native-async-storage/async-storage'; 
 
 const apiClient = axios.create({

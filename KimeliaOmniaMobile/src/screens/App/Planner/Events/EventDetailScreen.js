@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
-import { Alert, View, StyleSheet, Text } from 'react-native';
+import { Alert, View, StyleSheet, Text } from 'react-native'; // Import Text
 import { useFocusEffect } from '@react-navigation/native';
 import {
   GradientBackground,
@@ -201,7 +200,10 @@ const EventDetailScreen = ({ route, navigation }) => {
               </Row>
               <View style={styles.attendeesContainer}>
                 {event.attendees.map((attendee, index) => (
-                  <DetailText key={index} style={styles.attendeeItem}>- {attendee}</DetailText>
+                  <DetailText key={index} style={styles.attendeeItem}>
+                    <Text>- </Text>{/* Wrapped static text */}
+                    {attendee}
+                  </DetailText>
                 ))}
               </View>
             </Section>
@@ -220,7 +222,7 @@ const EventDetailScreen = ({ route, navigation }) => {
                       <BadgeText>{format(new Date(reminder.time), 'MMM d, p')}</BadgeText>
                     </Badge>
                     <Badge type="default" style={styles.reminderBadge}>
-                      <BadgeText>{reminder.method.replace('_', ' ')}</BadgeText>
+                      <BadgeText>{reminder.method}</BadgeText>
                     </Badge>
                   </Row>
                 ))}
@@ -338,7 +340,7 @@ const styles = StyleSheet.create({
   },
   attendeeItem: {
     marginBottom: 4,
-    marginLeft: 10, // Indent attendees
+    marginLeft: 10,
   },
   remindersContainer: {
     marginTop: 8,

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Alert, View, StyleSheet, Text } from 'react-native'; // Import Text
+import { Alert, View, StyleSheet, Text } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import {
   GradientBackground,
@@ -20,22 +20,25 @@ import {
 } from '../../../components/StyledComponents';
 import apiClient from '../../../api/apiClient';
 import { COLORS, GRADIENTS, FONTS } from '../../../constants';
-import { format } from 'date-fns';
+import { format, parseISO, isPast } from 'date-fns';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
-const TaskDetailScreen = ({ route, navigation }) => {
-  const { taskId, taskTitle } = route.params;
-  const [task, setTask] = useState(null);
+const GoalDetailScreen = ({ route, navigation }) => {
+  // Ensure goalId is stringified upon retrieval if it somehow isn't
+  const { goalId: routeGoalId, goalTitle } = route.params;
+  const goalId = String(routeGoalId); // --- Explicitly stringify here ---
+
+  const [goal, setGoal] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  if (!taskId || typeof taskId !== 'string' || taskId.trim() === '') {
-    console.error("TaskDetailScreen received invalid or empty taskId:", taskId);
+  if (!goalId || goalId.trim() === '') { // Use the stringified goalId for validation
+    console.error("GoalDetailScreen received invalid or empty goalId:", goalId);
     return (
       <GradientBackground>
         <ContentContainer>
           <ErrorText>
-            Error: Invalid or missing Task ID provided. Cannot retrieve details.
+            Error: Invalid or missing Goal ID provided. Cannot retrieve details.
           </ErrorText>
           <GradientButton onPress={() => navigation.goBack()}>
             <GradientButtonBackground>
@@ -48,58 +51,58 @@ const TaskDetailScreen = ({ route, navigation }) => {
   }
 
   useEffect(() => {
-    navigation.setOptions({ title: taskTitle || 'Task Details' });
-  }, [navigation, taskTitle]);
+    navigation.setOptions({ title: goalTitle || 'Goal Details' });
+  }, [navigation, goalTitle]);
 
-  const fetchTaskDetails = useCallback(async () => {
+  const fetchGoalDetails = useCallback(async () => {
     setError('');
     setLoading(true);
     try {
-      const response = await apiClient.get(`/tasks/${taskId}`);
-      setTask(response.data.data);
+      const response = await apiClient.get(`/goals/${goalId}`); // Use stringified goalId
+      setGoal(response.data.data);
     } catch (e) {
-      console.error("Failed to fetch task details:", e.response?.data || e.message);
-      setError(e.response?.data?.message || 'Failed to load task details.');
-      Alert.alert('Error', e.response?.data?.message || 'Could not load task details.');
+      console.error("Failed to fetch goal details:", e.response?.data || e.message);
+      setError(e.response?.data?.message || 'Failed to load goal details.');
+      Alert.alert('Error', e.response?.data?.message || 'Could not load goal details.');
     } finally {
       setLoading(false);
     }
-  }, [taskId]);
+  }, [goalId]);
 
   useFocusEffect(
     useCallback(() => {
-      fetchTaskDetails();
+      fetchGoalDetails();
       return () => {};
-    }, [fetchTaskDetails])
+    }, [fetchGoalDetails])
   );
 
-  const handleDeleteTask = async () => {
+  const handleDeleteGoal = async () => {
     Alert.alert(
-      "Delete Task",
-      "Are you sure you want to delete this task?",
+      "Delete Goal",
+      "Are you sure you want to delete this goal?",
       [
         {
           text: "Cancel",
-          style: "cancel"
+          style: "cancel",
         },
         {
           text: "Delete",
           onPress: async () => {
             setLoading(true);
             try {
-              await apiClient.delete(`/tasks/${taskId}`);
-              Alert.alert("Success", "Task deleted successfully!");
+              await apiClient.delete(`/goals/${goalId}`); // Use stringified goalId
+              Alert.alert("Success", "Goal deleted successfully!");
               navigation.goBack();
             } catch (e) {
-              console.error("Failed to delete task:", e.response?.data || e.message);
-              setError(e.response?.data?.message || 'Failed to delete task.');
-              Alert.alert('Error', e.response?.data?.message || 'Could not delete task.');
+              console.error("Failed to delete goal:", e.response?.data || e.message);
+              setError(e.response?.data?.message || 'Failed to delete goal.');
+              Alert.alert('Error', e.response?.data?.message || 'Could not delete goal.');
             } finally {
               setLoading(false);
             }
           },
-          style: "destructive"
-        }
+          style: "destructive",
+        },
       ]
     );
   };
@@ -127,11 +130,11 @@ const TaskDetailScreen = ({ route, navigation }) => {
     );
   }
 
-  if (!task) {
+  if (!goal) {
     return (
       <GradientBackground>
         <ContentContainer>
-          <ErrorText>Task not found.</ErrorText>
+          <ErrorText>Goal not found.</ErrorText>
           <GradientButton onPress={() => navigation.goBack()}>
             <GradientButtonBackground>
               <ButtonText>Go Back</ButtonText>
@@ -146,103 +149,92 @@ const TaskDetailScreen = ({ route, navigation }) => {
     <GradientBackground>
       <ScrollContainer contentContainerStyle={styles.scrollContent}>
         <ContentContainer>
-          <Title style={styles.taskTitle}>{task.title}</Title>
+          <Title style={styles.goalTitle}>{goal.title}</Title>
 
           <View style={styles.metaRow}>
             <Row style={styles.metaItem}>
-              <MaterialCommunityIcons name="list-status" size={18} color={COLORS.chocolateBrown} style={styles.icon} />
+              <MaterialCommunityIcons name="trophy-outline" size={18} color={COLORS.chocolateBrown} style={styles.icon} />
               <Label style={styles.metaLabel}>Status:</Label>
-              <Badge type={task.status}><BadgeText>{task.status}</BadgeText></Badge>
+              <Badge type={goal.status === 'completed' ? 'completed' : 'info'}><BadgeText>{goal.status}</BadgeText></Badge>
             </Row>
-            <Row style={styles.metaItem}>
-              <MaterialCommunityIcons name="flag-outline" size={18} color={COLORS.chocolateBrown} style={styles.icon} />
-              <Label style={styles.metaLabel}>Priority:</Label>
-              <Badge type={task.priority}><BadgeText>{task.priority}</BadgeText></Badge>
-            </Row>
-          </View>
-
-          {task.dueDate && (
-            <Section style={styles.sectionCard}>
-              <Row style={styles.sectionHeader}>
-                <MaterialCommunityIcons name="calendar-clock-outline" size={20} color={COLORS.deepCoffee} style={styles.icon} />
-                <Label style={styles.sectionLabel}>Due Date</Label>
+            {goal.targetDate && (
+              <Row style={styles.metaItem}>
+                <MaterialCommunityIcons name="calendar-clock-outline" size={18} color={COLORS.chocolateBrown} style={styles.icon} />
+                <Label style={styles.metaLabel}>Target:</Label>
+                <Badge type={isPast(parseISO(goal.targetDate)) && goal.status !== 'completed' ? 'overdue' : 'default'}>
+                  <BadgeText>
+                    <Text>Target: </Text>
+                    {format(parseISO(goal.targetDate), 'MMM d, yyyy')}
+                  </BadgeText>
+                </Badge>
               </Row>
-              <DetailText style={styles.detailContent}>{format(new Date(task.dueDate), 'PPPPpppp')}</DetailText>
-            </Section>
-          )}
+            )}
+          </View>
 
           <Section style={styles.sectionCard}>
             <Row style={styles.sectionHeader}>
               <MaterialCommunityIcons name="file-document-outline" size={20} color={COLORS.deepCoffee} style={styles.icon} />
               <Label style={styles.sectionLabel}>Description</Label>
             </Row>
-            <DetailText style={styles.detailContent}>{task.description || 'No description provided.'}</DetailText>
+            <DetailText style={styles.detailContent}>{goal.description || 'No description provided.'}</DetailText>
           </Section>
 
-          {task.tags && task.tags.length > 0 && (
+          {goal.progress !== undefined && (
             <Section style={styles.sectionCard}>
               <Row style={styles.sectionHeader}>
-                <MaterialCommunityIcons name="tag-multiple" size={20} color={COLORS.deepCoffee} style={styles.icon} />
-                <Label style={styles.sectionLabel}>Tags</Label>
+                <MaterialCommunityIcons name="progress-check" size={20} color={COLORS.deepCoffee} style={styles.icon} />
+                <Label style={styles.sectionLabel}>Progress</Label>
               </Row>
-              <Row style={styles.tagsContainer}>
-                {task.tags.map((tag, index) => (
-                  <Badge key={index} type="default">
-                    <BadgeText>{tag}</BadgeText>
-                  </Badge>
-                ))}
-              </Row>
+              <DetailText style={styles.detailContent}>
+                <Text style={styles.progressValue}>{goal.progress}%</Text>
+                <Text> - </Text>
+                <Text>{goal.status}</Text>
+              </DetailText>
             </Section>
           )}
 
-          {task.project && (
+          {goal.category && (
             <Section style={styles.sectionCard}>
               <Row style={styles.sectionHeader}>
-                <MaterialCommunityIcons name="folder-outline" size={20} color={COLORS.deepCoffee} style={styles.icon} />
-                <Label style={styles.sectionLabel}>Project</Label>
+                <MaterialCommunityIcons name="tag-text-outline" size={20} color={COLORS.deepCoffee} style={styles.icon} />
+                <Label style={styles.sectionLabel}>Category</Label>
               </Row>
-              <DetailText style={styles.detailContent}>{task.project.name || String(task.project) || 'N/A'}</DetailText> {/* Ensure task.project is stringified */}
+              <Badge type="default" style={styles.categoryBadge}><BadgeText>{goal.category}</BadgeText></Badge>
             </Section>
           )}
 
-          {task.reminders && task.reminders.length > 0 && (
-            <Section style={styles.sectionCard}>
-              <Row style={styles.sectionHeader}>
-                <MaterialCommunityIcons name="bell-ring-outline" size={20} color={COLORS.deepCoffee} style={styles.icon} />
-                <Label style={styles.sectionLabel}>Reminders</Label>
-              </Row>
-              <View style={styles.remindersContainer}>
-                {task.reminders.map((reminder, index) => (
-                  <Row key={index} style={styles.reminderItem}>
-                    <Badge type="info" style={styles.reminderBadge}>
-                      <BadgeText>
-                        {format(new Date(reminder.time), 'MMM d, p')}
-                      </BadgeText>
-                    </Badge>
-                    <Badge type="default" style={styles.reminderBadge}>
-                      <BadgeText>{reminder.method}</BadgeText>
-                    </Badge>
-                  </Row>
-                ))}
-              </View>
-            </Section>
-          )}
+          <Section style={styles.sectionCard}>
+            <Row style={styles.sectionHeader}>
+              <MaterialCommunityIcons name="history" size={20} color={COLORS.deepCoffee} style={styles.icon} />
+              <Label style={styles.sectionLabel}>Timestamps</Label>
+            </Row>
+            {goal.createdAt && (
+              <DetailText style={styles.detailContent}>
+                <Text style={styles.timestampLabel}>Created At:</Text> {format(parseISO(goal.createdAt), 'PPPPpppp')}
+              </DetailText>
+            )}
+            {goal.updatedAt && (
+              <DetailText style={styles.detailContent}>
+                <Text style={styles.timestampLabel}>Last Updated:</Text> {format(parseISO(goal.updatedAt), 'PPPPpppp')}
+              </DetailText>
+            )}
+          </Section>
 
           <Row style={styles.buttonGroup}>
-            <GradientButton onPress={() => navigation.navigate('TaskForm', { taskId: task._id, taskToEdit: task })} style={styles.editButton}>
+            <GradientButton onPress={() => navigation.navigate('GoalForm', { goalId: goal._id, goalToEdit: goal })} style={styles.editButton}>
               <GradientButtonBackground colors={GRADIENTS.primaryButton}>
                 <Row style={styles.buttonContent}>
                   <MaterialCommunityIcons name="pencil" size={20} color={COLORS.white} />
-                  <ButtonText>Edit Task</ButtonText>
+                  <ButtonText>Edit Goal</ButtonText>
                 </Row>
               </GradientButtonBackground>
             </GradientButton>
 
-            <GradientButton onPress={handleDeleteTask} style={styles.deleteButton}>
+            <GradientButton onPress={handleDeleteGoal} style={styles.deleteButton}>
               <GradientButtonBackground colors={[COLORS.errorRed, '#cc0000']}>
                 <Row style={styles.buttonContent}>
                   <MaterialCommunityIcons name="delete" size={20} color={COLORS.white} />
-                  <ButtonText>Delete Task</ButtonText>
+                  <ButtonText>Delete Goal</ButtonText>
                 </Row>
               </GradientButtonBackground>
             </GradientButton>
@@ -259,7 +251,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingVertical: 20,
   },
-  taskTitle: {
+  goalTitle: {
     fontSize: 26,
     marginBottom: 25,
     color: COLORS.deepCoffee,
@@ -328,26 +320,18 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontFamily: FONTS.secondary,
   },
+  progressValue: {
+    fontWeight: 'bold',
+    color: COLORS.chocolateBrown,
+  },
+  categoryBadge: {
+    marginTop: 8,
+    alignSelf: 'flex-start',
+  },
   tagsContainer: {
     marginTop: 8,
     flexWrap: 'wrap',
     gap: 8,
-  },
-  remindersContainer: {
-    marginTop: 8,
-  },
-  reminderItem: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    backgroundColor: COLORS.softCream,
-    borderRadius: 8,
-    padding: 10,
-    marginBottom: 8,
-    gap: 8,
-  },
-  reminderBadge: {
-    marginBottom: 0,
   },
   timestampLabel: {
     fontWeight: '700',
@@ -369,4 +353,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default TaskDetailScreen;
+export default GoalDetailScreen;
