@@ -3,9 +3,10 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
-// Import the module stacks
-import HomeScreen from '../screens/App/HomeScreen'; // We can keep Home as a simple tab, or wrap it in its own stack
-import PlannerStackScreen from './PlannerStack'; // Import the new PlannerStack
+// Import the module stacks/screens
+import HomeScreen from '../screens/App/HomeScreen';
+import PlannerStackScreen from './PlannerStack';
+import CommunicatorStackScreen from './CommunicatorStack'; // Import the new CommunicatorStack
 
 import { COLORS } from '../constants';
 
@@ -15,8 +16,10 @@ const Tab = createBottomTabNavigator();
 const getTabBarVisibility = (route) => {
   const routeName = getFocusedRouteNameFromRoute(route);
   // Hide tab bar for specific detail/form screens *within their respective stacks*
-  // For nested navigators, getFocusedRouteNameFromRoute will give the name of the *innermost* focused screen
-  const hideOnScreens = ['TaskForm', 'TaskDetail', 'EventForm', 'EventDetail'];
+  const hideOnScreens = [
+    'TaskForm', 'TaskDetail', 'EventForm', 'EventDetail',
+    'MessageForm', 'MessageDetail' // Add Communicator detail/form screens
+  ];
   if (hideOnScreens.includes(routeName)) {
     return 'none'; // This hides the tab bar
   }
@@ -45,7 +48,7 @@ const MainTabNavigator = () => {
       })}
     >
       <Tab.Screen
-        name="HomeTab" // A simple home tab for a personalized overview
+        name="HomeTab"
         component={HomeScreen}
         options={{
           title: 'Home',
@@ -55,27 +58,26 @@ const MainTabNavigator = () => {
         }}
       />
       <Tab.Screen
-        name="PlannerTab" // This tab now represents the entire Planner module
+        name="PlannerTab"
         component={PlannerStackScreen} // Renders the PlannerStackNavigator
         options={({ route }) => ({
           title: 'Planner',
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="calendar-check" color={color} size={size} />
           ),
-          // Apply dynamic visibility based on the focused screen INSIDE PlannerStack
           tabBarStyle: { display: getTabBarVisibility(route) },
         })}
       />
-      {/* Add placeholders for other modules */}
       <Tab.Screen
         name="CommunicatorTab"
-        component={HomeScreen} // Placeholder for Communicator module's stack
-        options={{
+        component={CommunicatorStackScreen} // Now renders the CommunicatorStackNavigator
+        options={({ route }) => ({
           title: 'Communicator',
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="message-text-outline" color={color} size={size} />
           ),
-        }}
+          tabBarStyle: { display: getTabBarVisibility(route) }, // Apply dynamic visibility
+        })}
       />
       <Tab.Screen
         name="CoachTab"

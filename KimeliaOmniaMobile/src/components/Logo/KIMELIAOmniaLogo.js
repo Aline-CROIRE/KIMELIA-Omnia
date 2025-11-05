@@ -1,4 +1,8 @@
+
+
+// ============================================================================
 // src/components/Logo/KIMELIAOmniaLogo.js
+// ============================================================================
 import React from 'react';
 import styled from 'styled-components/native';
 import KIMELIAOmniaIcon from './KIMELIAOmniaIcon';
@@ -10,12 +14,11 @@ const LogoContainer = styled.View`
   gap: 12px;
 `;
 
-// Changed default iconSize and textSize to numbers
-const KIMELIAOmniaLogo = ({ iconSize = 60, textSize = 22 }) => { // 60 for icon, 22 for text (equivalent of 2.2rem if 1rem=10px)
+const KIMELIAOmniaLogo = ({ iconSize = 60, textSize = 22, showText = true }) => {
   return (
     <LogoContainer>
       <KIMELIAOmniaIcon size={iconSize} />
-      <KIMELIAOmniaText fontSize={textSize} />
+      {showText && <KIMELIAOmniaText fontSize={textSize} />}
     </LogoContainer>
   );
 };
