@@ -5,14 +5,14 @@ const {
   createLearningResource,
   updateLearningResource,
   deleteLearningResource,
-  getMotivationalTipController, // If you want this in this route file
-} = require('../controllers/learningResourceController'); // Ensure this path is correct
+  getMotivationalTipController,
+} = require('../controllers/learningResourceController');
 const { protect } = require('../middleware/authMiddleware');
 const {
-    validateId, // For resource ID in params
+    validateId,
     validateCreateLearningResource,
     validateUpdateLearningResource
-} = require('../middleware/validationMiddleware'); // Ensure this path is correct
+} = require('../middleware/validationMiddleware');
 
 const router = express.Router();
 
@@ -25,6 +25,15 @@ const router = express.Router();
 
 // Apply protect middleware to all learning resource routes
 router.use(protect);
+
+// --- NEW DEBUGGING MIDDLEWARE ---
+router.param('id', (req, res, next, id) => {
+  console.log(`[learningResourceRoutes.js] router.param('id'): Raw ID from URL: '${id}', Type: ${typeof id}`);
+  req.params.id = String(id);
+  console.log(`[learningResourceRoutes.js] router.param('id'): Coerced req.params.id: '${req.params.id}', Type: ${typeof req.params.id}`);
+  next();
+});
+// --- END NEW DEBUGGING MIDDLEWARE ---
 
 /**
  * @swagger
@@ -84,8 +93,8 @@ router.use(protect);
  *           schema:
  *             $ref: '#/components/schemas/LearningResource'
  *             properties:
- *               _id: { readOnly: false } # Override readOnly for request body example
- *               user: { readOnly: false } # Override readOnly for request body example
+ *               _id: { readOnly: false }
+ *               user: { readOnly: false }
  *     responses:
  *       201:
  *         description: Resource created successfully.

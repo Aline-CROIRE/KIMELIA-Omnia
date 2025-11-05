@@ -2,15 +2,23 @@ const Joi = require('joi');
 const { Types } = require('mongoose');
 
 // Custom Joi extension for ObjectId validation
+// TEMPORARY BYPASS: We're removing 'base: joi.string()' here
+// so JoiObjectId directly uses our custom validation, allowing us
+// to see if the issue is with Joi's internal string coercion/validation
+// before our custom 'validate' method even gets called.
 const JoiObjectId = Joi.extend((joi) => ({
   type: 'objectId',
-  base: joi.string(),
+  // Removed 'base: joi.string()' TEMPORARILY.
+  // This means Joi will not perform its default string validation first.
+  // It will directly call our 'validate' method with whatever 'value' it receives.
   messages: {
     'objectId.invalid': '{{#label}} must be a valid MongoDB ObjectId',
   },
   validate(value, helpers) {
-    // console.log(`[JoiObjectId.validate] Incoming value: '${value}', Type: ${typeof value}`); // Keep for debugging if needed
-    if (!Types.ObjectId.isValid(value)) {
+    console.log(`[JoiObjectId.validate - TEMPORARY BYPASS] Incoming value: '${value}', Type: ${typeof value}`); // CRITICAL DEBUG LOG
+    // If the value is not a string, or is an empty string, the following might still fail.
+    // We expect it to be a string at this point from Express.
+    if (typeof value !== 'string' || value.trim() === '' || !Types.ObjectId.isValid(value)) {
       return { value, errors: helpers.error('objectId.invalid') };
     }
     return value;
@@ -18,7 +26,10 @@ const JoiObjectId = Joi.extend((joi) => ({
 }));
 
 // --- Common Schemas ---
-const idSchema = JoiObjectId.objectId().hex().length(24).required();
+// idSchema now relies purely on our custom JoiObjectId type,
+// which TEMPORARILY does not inherit from joi.string()
+const idSchema = JoiObjectId.objectId().hex().length(24).required(); // Keep hex/length for format check if it passes initial type check
+
 const dateSchema = Joi.date().iso(); // ISO 8601 date format
 
 // --- Auth Schemas ---
@@ -204,7 +215,7 @@ const goalReminderSchema = Joi.object({
 
 const goalSchema = Joi.object({
     title: Joi.string().min(5).max(200).required(),
-    description: Joi.string().max(1000).optional(),
+    description: Joi.string().max(1000).optional().allow(''),
     category: Joi.string().valid('professional', 'personal', 'education', 'health', 'finance', 'other').default('personal').optional(),
     targetDate: dateSchema.required().min(Joi.ref('$now')).messages({'date.min': '{{#label}} cannot be in the past for new goals.'}),
     progress: Joi.number().min(0).max(100).default(0).optional(),
@@ -215,9 +226,9 @@ const goalSchema = Joi.object({
 
 const updateGoalSchema = Joi.object({
     title: Joi.string().min(5).max(200).optional(),
-    description: Joi.string().max(1000).optional(),
+    description: Joi.string().max(1000).optional().allow(''),
     category: Joi.string().valid('professional', 'personal', 'education', 'health', 'finance', 'other').optional(),
-    targetDate: dateSchema.optional(), // Removed .min(new Date()) - logic for past dates handled in controller
+    targetDate: dateSchema.optional(),
     progress: Joi.number().min(0).max(100).optional(),
     status: Joi.string().valid('active', 'completed', 'overdue', 'cancelled', 'on_hold').optional(),
     relatedTasks: Joi.array().items(JoiObjectId.objectId()).optional(),
@@ -225,25 +236,30 @@ const updateGoalSchema = Joi.object({
 }).min(1);
 
 // --- Learning Resource Schemas (Omnia Coach) ---
-const learningResourceSchema = Joi.object({ // This was the 'undefined' schema!
+const learningResourceSchema = Joi.object({
     title: Joi.string().min(5).max(300).required(),
-    description: Joi.string().max(1000).optional(),
-    url: Joi.string().uri().required(),
+    description: Joi.string().max(1000).optional().allow(''),
+    url: Joi.string().uri().required().messages({
+        'string.uri': '{{#label}} must be a valid URL',
+        'any.required': '{{#label}} is required'
+    }),
     type: Joi.string().valid('article', 'video', 'course', 'book', 'podcast', 'tool', 'other').required(),
     category: Joi.string().valid('programming', 'marketing', 'finance', 'design', 'self-improvement', 'other').default('other').optional(),
-    tags: Joi.array().items(Joi.string().trim()).optional(),
-    relatedGoal: JoiObjectId.objectId().optional(),
+    tags: Joi.array().items(Joi.string().trim().min(1).max(50)).optional(),
+    relatedGoal: JoiObjectId.objectId().optional().allow(null),
     source: Joi.string().valid('manual', 'AI_suggested', 'web_scrape', 'imported').default('manual').optional(),
 });
 
 const updateLearningResourceSchema = Joi.object({
     title: Joi.string().min(5).max(300).optional(),
-    description: Joi.string().max(1000).optional(),
-    url: Joi.string().uri().optional(),
+    description: Joi.string().max(1000).optional().allow(''),
+    url: Joi.string().uri().optional().messages({
+        'string.uri': '{{#label}} must be a valid URL',
+    }),
     type: Joi.string().valid('article', 'video', 'course', 'book', 'podcast', 'tool', 'other').optional(),
     category: Joi.string().valid('programming', 'marketing', 'finance', 'design', 'self-improvement', 'other').optional(),
-    tags: Joi.array().items(Joi.string().trim()).optional(),
-    relatedGoal: JoiObjectId.objectId().optional(),
+    tags: Joi.array().items(Joi.string().trim().min(1).max(50)).optional(),
+    relatedGoal: JoiObjectId.objectId().optional().allow(null),
     source: Joi.string().valid('manual', 'AI_suggested', 'web_scrape', 'imported').optional(),
 }).min(1);
 
@@ -430,8 +446,8 @@ module.exports = {
   validateUpdateGoal: validate(updateGoalSchema),
 
   // Learning Resource validation
-  validateCreateLearningResource: validate(learningResourceSchema), // Now defined
-  validateUpdateLearningResource: validate(updateLearningResourceSchema), // Now defined
+  validateCreateLearningResource: validate(learningResourceSchema),
+  validateUpdateLearningResource: validate(updateLearningResourceSchema),
 
   // Project validation
   validateCreateProject: validate(projectSchema),

@@ -1,4 +1,3 @@
-
 const express = require('express');
 const {
   getGoals,
@@ -24,6 +23,17 @@ const router = express.Router();
 
 // Apply protect middleware to all goal routes
 router.use(protect);
+
+// --- NEW DEBUGGING MIDDLEWARE ---
+router.param('id', (req, res, next, id) => {
+  console.log(`[goalRoutes.js] router.param('id'): Raw ID from URL: '${id}', Type: ${typeof id}`);
+  // If 'id' somehow comes as non-string, try to coerce it here, though it should be string by default
+  req.params.id = String(id);
+  console.log(`[goalRoutes.js] router.param('id'): Coerced req.params.id: '${req.params.id}', Type: ${typeof req.params.id}`);
+  next();
+});
+// --- END NEW DEBUGGING MIDDLEWARE ---
+
 
 /**
  * @swagger
