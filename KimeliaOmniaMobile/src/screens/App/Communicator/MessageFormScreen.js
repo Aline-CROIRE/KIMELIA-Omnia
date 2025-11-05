@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { Alert, View, Platform, TouchableOpacity, TextInput } from 'react-native';
+import { Alert, View, Platform, TouchableOpacity, TextInput, StyleSheet } from 'react-native'; // Import StyleSheet
 import { Picker } from '@react-native-picker/picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { format, isBefore, isValid } from 'date-fns';
@@ -20,9 +21,10 @@ import {
   LoadingIndicator,
   Label,
   BadgeText,
+  Row,
 } from '../../../components/StyledComponents';
 import apiClient from '../../../api/apiClient';
-import { COLORS, GRADIENTS } from '../../../constants';
+import { COLORS, GRADIENTS, FONTS } from '../../../constants'; // Import FONTS
 
 const MESSAGE_TYPES = [
   { value: 'email_summary', label: '📧 Email Summary', icon: 'email-outline' },
@@ -82,24 +84,19 @@ const MessageFormScreen = ({ route, navigation }) => {
     
     if (Platform.OS === 'android') {
       setShowScheduledDatePicker(false);
-      setShowScheduledTimePicker(false);
+      if (currentMode === 'date' && selectedDate) {
+        setShowScheduledTimePicker(true);
+      }
     } else {
-      setShowScheduledDatePicker(Platform.OS === 'ios');
+      setShowScheduledDatePicker(currentMode === 'date');
     }
     
     if (event?.type === 'set' && selectedDate) {
       const newDate = scheduledSendTime ? new Date(scheduledSendTime) : new Date();
-      if (currentMode === 'date') {
-        newDate.setFullYear(selectedDate.getFullYear());
-        newDate.setMonth(selectedDate.getMonth());
-        newDate.setDate(selectedDate.getDate());
-      }
+      newDate.setFullYear(selectedDate.getFullYear());
+      newDate.setMonth(selectedDate.getMonth());
+      newDate.setDate(selectedDate.getDate());
       setScheduledSendTime(newDate);
-      
-      // Show time picker after date on Android
-      if (Platform.OS === 'android' && currentMode === 'date') {
-        setTimeout(() => setShowScheduledTimePicker(true), 300);
-      }
     }
   };
 
@@ -188,9 +185,9 @@ const MessageFormScreen = ({ route, navigation }) => {
 
   return (
     <GradientBackground>
-      <ScrollContainer>
+      <ScrollContainer contentContainerStyle={styles.scrollContent}>
         <ContentContainer>
-          <Title style={{ color: COLORS.deepCoffee, marginBottom: 20 }}>
+          <Title style={styles.formTitle}>
             {isEditing ? 'Edit Message' : 'Create New Message'}
           </Title>
 
@@ -198,21 +195,16 @@ const MessageFormScreen = ({ route, navigation }) => {
           {error ? <ErrorText>{error}</ErrorText> : null}
 
           {/* Type and Status Row */}
-          <View style={{ flexDirection: 'row', gap: 10, marginBottom: 15 }}>
-            <View style={{ flex: 1 }}>
+          <Row style={styles.pickerRow}>
+            <View style={styles.pickerContainer}>
               <Label>Type *</Label>
-              <View style={{ 
-                borderColor: getTypeColor(type), 
-                borderWidth: 2, 
-                borderRadius: 12, 
-                backgroundColor: COLORS.white,
-                overflow: 'hidden'
-              }}>
+              <View style={[styles.pickerWrapper, { borderColor: getTypeColor(type) }]}>
                 <Picker
                   selectedValue={type}
                   onValueChange={setType}
-                  style={{ color: COLORS.deepCoffee }}
+                  style={styles.picker}
                   enabled={!loading}
+                  itemStyle={styles.pickerItem}
                 >
                   {MESSAGE_TYPES.map((msgType) => (
                     <Picker.Item key={msgType.value} label={msgType.label} value={msgType.value} />
@@ -221,20 +213,15 @@ const MessageFormScreen = ({ route, navigation }) => {
               </View>
             </View>
 
-            <View style={{ flex: 1 }}>
+            <View style={styles.pickerContainer}>
               <Label>Status *</Label>
-              <View style={{ 
-                borderColor: getStatusColor(status), 
-                borderWidth: 2, 
-                borderRadius: 12, 
-                backgroundColor: COLORS.white,
-                overflow: 'hidden'
-              }}>
+              <View style={[styles.pickerWrapper, { borderColor: getStatusColor(status) }]}>
                 <Picker
                   selectedValue={status}
                   onValueChange={setStatus}
-                  style={{ color: COLORS.deepCoffee }}
+                  style={styles.picker}
                   enabled={!loading}
+                  itemStyle={styles.pickerItem}
                 >
                   {MESSAGE_STATUSES.map((msgStatus) => (
                     <Picker.Item key={msgStatus.value} label={msgStatus.label} value={msgStatus.value} />
@@ -242,27 +229,18 @@ const MessageFormScreen = ({ route, navigation }) => {
                 </Picker>
               </View>
             </View>
-          </View>
+          </Row>
 
           {/* Subject */}
           <Label>Subject</Label>
-          <View style={{ 
-            flexDirection: 'row', 
-            alignItems: 'center',
-            borderColor: COLORS.lightCocoa,
-            borderWidth: 1,
-            borderRadius: 12,
-            marginBottom: 15,
-            backgroundColor: COLORS.white,
-            paddingHorizontal: 12
-          }}>
-            <MaterialCommunityIcons name="text-subject" size={20} color={COLORS.lightCocoa} />
+          <View style={styles.inputWithIconWrapper}>
+            <MaterialCommunityIcons name="text-subject" size={20} color={COLORS.lightCocoa} style={styles.icon} />
             <Input
               placeholder="Message subject (optional)"
               value={subject}
               onChangeText={setSubject}
               editable={!loading}
-              style={{ flex: 1, marginBottom: 0, borderWidth: 0 }}
+              style={styles.inputNoBorder}
             />
           </View>
 
@@ -273,23 +251,18 @@ const MessageFormScreen = ({ route, navigation }) => {
             value={content}
             onChangeText={setContent}
             editable={!loading}
+            style={styles.textAreaField}
           />
 
           {/* Source */}
           <Label>Source *</Label>
-          <View style={{ 
-            borderColor: COLORS.lightCocoa, 
-            borderWidth: 1, 
-            borderRadius: 12, 
-            marginBottom: 15, 
-            backgroundColor: COLORS.white,
-            overflow: 'hidden'
-          }}>
+          <View style={styles.pickerWrapper}>
             <Picker
               selectedValue={source}
               onValueChange={setSource}
-              style={{ color: COLORS.deepCoffee }}
+              style={styles.picker}
               enabled={!loading}
+              itemStyle={styles.pickerItem}
             >
               {MESSAGE_SOURCES.map((msgSource) => (
                 <Picker.Item key={msgSource.value} label={msgSource.label} value={msgSource.value} />
@@ -299,198 +272,132 @@ const MessageFormScreen = ({ route, navigation }) => {
 
           {/* External Reference ID */}
           <Label>External Reference ID</Label>
-          <View style={{ 
-            flexDirection: 'row', 
-            alignItems: 'center',
-            borderColor: COLORS.lightCocoa,
-            borderWidth: 1,
-            borderRadius: 12,
-            marginBottom: 15,
-            backgroundColor: COLORS.white,
-            paddingHorizontal: 12
-          }}>
-            <MaterialCommunityIcons name="link-variant" size={20} color={COLORS.lightCocoa} />
+          <View style={styles.inputWithIconWrapper}>
+            <MaterialCommunityIcons name="link-variant" size={20} color={COLORS.lightCocoa} style={styles.icon} />
             <Input
               placeholder="e.g., Gmail ID, Slack message ID"
               value={externalReferenceId}
               onChangeText={setExternalReferenceId}
               editable={!loading}
-              style={{ flex: 1, marginBottom: 0, borderWidth: 0 }}
+              style={styles.inputNoBorder}
             />
           </View>
 
           {/* Tags */}
           <Label>Tags</Label>
-          <View style={{ 
-            flexDirection: 'row', 
-            alignItems: 'center',
-            borderColor: COLORS.lightCocoa,
-            borderWidth: 1,
-            borderRadius: 12,
-            marginBottom: 15,
-            backgroundColor: COLORS.white,
-            paddingHorizontal: 12
-          }}>
-            <MaterialCommunityIcons name="tag-multiple" size={20} color={COLORS.lightCocoa} />
+          <View style={styles.inputWithIconWrapper}>
+            <MaterialCommunityIcons name="tag-multiple" size={20} color={COLORS.lightCocoa} style={styles.icon} />
             <Input
               placeholder="e.g., work, urgent, client"
               value={tags}
               onChangeText={setTags}
               editable={!loading}
-              style={{ flex: 1, marginBottom: 0, borderWidth: 0 }}
+              style={styles.inputNoBorder}
             />
           </View>
 
           {/* Scheduled Send Time */}
-          <View style={{ 
-            backgroundColor: COLORS.softCream, 
-            padding: 15, 
-            borderRadius: 12, 
-            marginBottom: 15 
-          }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-              <MaterialCommunityIcons name="clock-time-four-outline" size={20} color={COLORS.deepCoffee} />
-              <Label style={{ marginLeft: 8, marginBottom: 0 }}>Scheduled Send Time</Label>
+          <View style={styles.scheduledTimeSection}>
+            <View style={styles.scheduledTimeHeader}>
+              <MaterialCommunityIcons name="clock-time-four-outline" size={20} color={COLORS.deepCoffee} style={styles.icon} />
+              <Label style={styles.scheduledTimeLabel}>Scheduled Send Time</Label>
             </View>
 
             {scheduledSendTime ? (
               <View>
-                <View style={{ flexDirection: 'row', gap: 10, marginBottom: 10 }}>
+                <Row style={styles.scheduledTimePickerRow}>
                   <TouchableOpacity
-                    style={{
-                      flex: 1,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      borderColor: COLORS.lightCocoa,
-                      borderWidth: 1,
-                      borderRadius: 10,
-                      padding: 12,
-                      backgroundColor: COLORS.white,
-                    }}
+                    style={styles.scheduledTimePickerButton}
                     onPress={() => setShowScheduledDatePicker(true)}
                     disabled={loading}
                   >
-                    <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                      <MaterialCommunityIcons name="calendar" size={18} color={COLORS.deepCoffee} style={{ marginRight: 8 }} />
+                    <View style={styles.scheduledTimePickerContent}>
+                      <MaterialCommunityIcons name="calendar" size={18} color={COLORS.deepCoffee} style={styles.icon} />
                       <TextInput
                         editable={false}
                         value={format(scheduledSendTime, 'MMM dd, yyyy')}
-                        style={{ color: COLORS.deepCoffee }}
+                        style={styles.scheduledTimeText}
                       />
                     </View>
                   </TouchableOpacity>
 
                   <TouchableOpacity
-                    style={{
-                      flex: 1,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      borderColor: COLORS.lightCocoa,
-                      borderWidth: 1,
-                      borderRadius: 10,
-                      padding: 12,
-                      backgroundColor: COLORS.white,
-                    }}
+                    style={styles.scheduledTimePickerButton}
                     onPress={() => setShowScheduledTimePicker(true)}
                     disabled={loading}
                   >
-                    <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                      <MaterialCommunityIcons name="clock-outline" size={18} color={COLORS.deepCoffee} style={{ marginRight: 8 }} />
+                    <View style={styles.scheduledTimePickerContent}>
+                      <MaterialCommunityIcons name="clock-outline" size={18} color={COLORS.deepCoffee} style={styles.icon} />
                       <TextInput
                         editable={false}
                         value={format(scheduledSendTime, 'h:mm a')}
-                        style={{ color: COLORS.deepCoffee }}
+                        style={styles.scheduledTimeText}
                       />
                     </View>
                   </TouchableOpacity>
-                </View>
+                </Row>
 
                 <TouchableOpacity 
                   onPress={clearScheduledSendTime}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: 10,
-                    backgroundColor: COLORS.white,
-                    borderRadius: 8,
-                    borderWidth: 1,
-                    borderColor: COLORS.errorRed,
-                  }}
+                  style={styles.clearScheduledTimeButton}
                 >
-                  <MaterialCommunityIcons name="close-circle" size={18} color={COLORS.errorRed} style={{ marginRight: 6 }} />
-                  <BadgeText style={{ color: COLORS.errorRed }}>Clear Scheduled Time</BadgeText>
+                  <MaterialCommunityIcons name="close-circle" size={18} color={COLORS.errorRed} style={styles.icon} />
+                  <BadgeText style={styles.clearScheduledTimeText}>Clear Scheduled Time</BadgeText>
                 </TouchableOpacity>
               </View>
             ) : (
               <TouchableOpacity
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderColor: COLORS.lightCocoa,
-                  borderWidth: 1,
-                  borderStyle: 'dashed',
-                  borderRadius: 10,
-                  padding: 16,
-                  backgroundColor: COLORS.white,
-                }}
+                style={styles.setScheduledTimeButton}
                 onPress={() => setShowScheduledDatePicker(true)}
                 disabled={loading}
               >
-                <MaterialCommunityIcons name="calendar-clock" size={24} color={COLORS.lightCocoa} style={{ marginRight: 10 }} />
-                <BadgeText style={{ color: COLORS.lightCocoa }}>Set Scheduled Send Time</BadgeText>
+                <MaterialCommunityIcons name="calendar-clock" size={24} color={COLORS.lightCocoa} style={styles.icon} />
+                <BadgeText style={styles.setScheduledTimeText}>Set Scheduled Send Time</BadgeText>
               </TouchableOpacity>
             )}
           </View>
 
           {/* Related IDs Section - Optional for future */}
-          <View style={{ 
-            backgroundColor: COLORS.softCream, 
-            padding: 15, 
-            borderRadius: 12, 
-            marginBottom: 20 
-          }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-              <MaterialCommunityIcons name="link-variant" size={20} color={COLORS.deepCoffee} />
-              <Label style={{ marginLeft: 8, marginBottom: 0 }}>Related Items (Optional)</Label>
+          <View style={styles.relatedItemsSection}>
+            <View style={styles.relatedItemsHeader}>
+              <MaterialCommunityIcons name="link-variant" size={20} color={COLORS.deepCoffee} style={styles.icon} />
+              <Label style={styles.relatedItemsLabel}>Related Items (Optional)</Label>
             </View>
 
-            <Label style={{ fontSize: 12, marginBottom: 5 }}>Related Task ID</Label>
+            <Label style={styles.smallLabel}>Related Task ID</Label>
             <Input
               placeholder="Enter task ID"
               value={relatedTaskId}
               onChangeText={setRelatedTaskId}
               editable={!loading}
-              style={{ marginBottom: 10 }}
+              style={styles.inputField}
             />
 
-            <Label style={{ fontSize: 12, marginBottom: 5 }}>Related Event ID</Label>
+            <Label style={styles.smallLabel}>Related Event ID</Label>
             <Input
               placeholder="Enter event ID"
               value={relatedEventId}
               onChangeText={setRelatedEventId}
               editable={!loading}
+              style={styles.inputField}
             />
           </View>
 
           {/* Submit Button */}
-          <GradientButton onPress={handleSubmit} disabled={loading} style={{ marginBottom: 30 }}>
+          <GradientButton onPress={handleSubmit} disabled={loading} style={styles.submitButton}>
             <GradientButtonBackground colors={isEditing ? GRADIENTS.primaryButton : GRADIENTS.goldAccent}>
               {loading ? (
                 <LoadingIndicator size="small" color="#fff" />
               ) : (
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Row style={styles.buttonContent}>
                   <MaterialCommunityIcons 
                     name={isEditing ? "content-save" : "message-plus"} 
                     size={20} 
                     color="#fff" 
-                    style={{ marginRight: 8 }} 
+                    style={styles.icon} 
                   />
                   <ButtonText>{isEditing ? 'Update Message' : 'Create Message'}</ButtonText>
-                </View>
+                </Row>
               )}
             </GradientButtonBackground>
           </GradientButton>
@@ -519,5 +426,181 @@ const MessageFormScreen = ({ route, navigation }) => {
     </GradientBackground>
   );
 };
+
+const styles = StyleSheet.create({
+  scrollContent: {
+    flexGrow: 1,
+    paddingVertical: 20,
+  },
+  formTitle: {
+    fontSize: 26,
+    marginBottom: 25,
+    color: COLORS.deepCoffee,
+    fontFamily: FONTS.primary,
+    fontWeight: 'bold',
+  },
+  inputField: {
+    marginBottom: 15,
+  },
+  textAreaField: {
+    marginBottom: 15,
+  },
+  pickerRow: {
+    marginBottom: 15,
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  pickerContainer: {
+    flex: 1,
+  },
+  pickerWrapper: {
+    borderWidth: 2,
+    borderRadius: 12,
+    backgroundColor: COLORS.white,
+    overflow: 'hidden',
+    height: 55,
+    justifyContent: 'center',
+    marginBottom: 15,
+  },
+  picker: {
+    color: COLORS.deepCoffee,
+    height: 55,
+  },
+  pickerItem: {
+    height: 55,
+  },
+  inputWithIconWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderColor: COLORS.lightCocoa,
+    borderWidth: 1,
+    borderRadius: 12,
+    marginBottom: 15,
+    backgroundColor: COLORS.white,
+    paddingHorizontal: 12,
+    height: 50,
+  },
+  inputNoBorder: {
+    flex: 1,
+    marginBottom: 0,
+    borderWidth: 0,
+    height: '100%',
+    paddingVertical: 0,
+  },
+  icon: {
+    marginRight: 8,
+  },
+  scheduledTimeSection: {
+    backgroundColor: COLORS.softCream,
+    padding: 15,
+    borderRadius: 12,
+    marginBottom: 15,
+  },
+  scheduledTimeHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  scheduledTimeLabel: {
+    marginLeft: 8,
+    marginBottom: 0,
+    marginTop: 0,
+    fontSize: 16,
+    color: COLORS.deepCoffee,
+  },
+  scheduledTimePickerRow: {
+    marginBottom: 10,
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  scheduledTimePickerButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderColor: COLORS.lightCocoa,
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 12,
+    backgroundColor: COLORS.white,
+    height: 50,
+  },
+  scheduledTimePickerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  scheduledTimeText: {
+    color: COLORS.deepCoffee,
+    flex: 1,
+    paddingVertical: 0,
+    fontFamily: FONTS.secondary,
+    fontSize: 14,
+  },
+  clearScheduledTimeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 10,
+    backgroundColor: COLORS.white,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.errorRed,
+    height: 50,
+  },
+  clearScheduledTimeText: {
+    color: COLORS.errorRed,
+    fontFamily: FONTS.secondary,
+  },
+  setScheduledTimeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderColor: COLORS.lightCocoa,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderRadius: 10,
+    padding: 16,
+    backgroundColor: COLORS.white,
+    height: 60,
+  },
+  setScheduledTimeText: {
+    color: COLORS.lightCocoa,
+    fontFamily: FONTS.secondary,
+    fontSize: 14,
+  },
+  relatedItemsSection: {
+    backgroundColor: COLORS.softCream,
+    padding: 15,
+    borderRadius: 12,
+    marginBottom: 20,
+  },
+  relatedItemsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  relatedItemsLabel: {
+    marginLeft: 8,
+    marginBottom: 0,
+    marginTop: 0,
+    fontSize: 16,
+    color: COLORS.deepCoffee,
+  },
+  smallLabel: {
+    fontSize: 12,
+    marginBottom: 5,
+    marginTop: 10,
+  },
+  submitButton: {
+    marginBottom: 30,
+    marginTop: 20,
+  },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+});
 
 export default MessageFormScreen;

@@ -11,6 +11,8 @@ import {
   ErrorText,
   SuccessText,
   LoadingIndicator,
+  ContentContainer, // Use ContentContainer for consistent padding
+  ScrollContainer, // Add ScrollContainer for smaller screens
 } from '../../components/StyledComponents';
 import KIMELIAOmniaLogo from '../../components/Logo/KIMELIAOmniaLogo';
 import { AuthContext } from '../../context/AuthContext';
@@ -46,31 +48,36 @@ const LoginScreen = ({ navigation }) => {
 
   return (
     <GradientBackground>
-      <KIMELIAOmniaLogo iconSize={80} textSize={28} />
-      <Title style={{ marginTop: 30, color: COLORS.deepCoffee }}>Welcome Back!</Title>
-      {successMessage && <SuccessText>{successMessage}</SuccessText>}
-      {error && <ErrorText>{error}</ErrorText>}
-      <Input
-        placeholder="Email"
-        keyboardType="email-address"
-        autoCapitalize="none"
-        value={email}
-        onChangeText={setEmail}
-      />
-      <Input
-        placeholder="Password"
-        secureTextEntry
-        value={password}
-        onChangeText={setPassword}
-      />
-      <GradientButton onPress={handleLogin} disabled={loading}>
-        <GradientButtonBackground>
-          {loading ? <LoadingIndicator size="small" color="#fff" /> : <ButtonText>Login</ButtonText>}
-        </GradientButtonBackground>
-      </GradientButton>
-      <LinkText onPress={() => navigation.navigate('Register')}>
-        Don't have an account? Register here.
-      </LinkText>
+      <ScrollContainer contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ContentContainer>
+          <KIMELIAOmniaLogo iconSize={80} textSize={28} />
+          <Title style={{ marginTop: 30, color: COLORS.deepCoffee }}>Welcome Back!</Title>
+          {successMessage && <SuccessText>{successMessage}</SuccessText>}
+          {error && <ErrorText>{error}</ErrorText>}
+          <Input
+            placeholder="Email"
+            keyboardType="email-address"
+            autoCapitalize="none"
+            value={email}
+            onChangeText={setEmail}
+          />
+          <Input
+            placeholder="Password"
+            secureTextEntry
+            value={password}
+            onChangeText={setPassword}
+            style={{ marginBottom: 20 }} 
+          />
+          <GradientButton onPress={handleLogin} disabled={loading}>
+            <GradientButtonBackground>
+              {loading ? <LoadingIndicator size="small" color="#fff" /> : <ButtonText>Login</ButtonText>}
+            </GradientButtonBackground>
+          </GradientButton>
+          <LinkText onPress={() => navigation.navigate('Register')}>
+            Don't have an account? Register here.
+          </LinkText>
+        </ContentContainer>
+      </ScrollContainer>
     </GradientBackground>
   );
 };

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Alert, View } from 'react-native';
+import { Alert, View, StyleSheet } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import {
   GradientBackground,
@@ -16,11 +16,12 @@ import {
   GradientButton,
   GradientButtonBackground,
   ButtonText,
-  Section,
+  Section, // Ensure Section is imported
 } from '../../../components/StyledComponents';
 import apiClient from '../../../api/apiClient';
-import { COLORS, GRADIENTS } from '../../../constants';
+import { COLORS, GRADIENTS, FONTS } from '../../../constants';
 import { format } from 'date-fns';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons'; // For icons
 
 const TaskDetailScreen = ({ route, navigation }) => {
   const { taskId, taskTitle } = route.params;
@@ -55,10 +56,6 @@ const TaskDetailScreen = ({ route, navigation }) => {
     setError('');
     setLoading(true);
     try {
-      // --- ENHANCED LOGGING ---
-      console.log('Fetching task with ID:', taskId, ' (type:', typeof taskId, ')');
-      // --- END ENHANCED LOGGING ---
-
       const response = await apiClient.get(`/tasks/${taskId}`);
       setTask(response.data.data);
     } catch (e) {
@@ -91,9 +88,6 @@ const TaskDetailScreen = ({ route, navigation }) => {
           onPress: async () => {
             setLoading(true);
             try {
-              // --- ENHANCED LOGGING ---
-              console.log('Deleting task with ID:', taskId, ' (type:', typeof taskId, ')');
-              // --- END ENHANCED LOGGING ---
               await apiClient.delete(`/tasks/${taskId}`);
               Alert.alert("Success", "Task deleted successfully!");
               navigation.goBack();
@@ -151,40 +145,48 @@ const TaskDetailScreen = ({ route, navigation }) => {
 
   return (
     <GradientBackground>
-      <ScrollContainer>
+      <ScrollContainer contentContainerStyle={styles.scrollContent}>
         <ContentContainer>
-          <Title style={{ color: COLORS.deepCoffee }}>{task.title}</Title>
+          <Title style={styles.taskTitle}>{task.title}</Title>
 
-          <Section style={{ width: '100%', alignItems: 'flex-start' }}>
-            <Label>Description:</Label>
-            <DetailText>{task.description || 'No description provided.'}</DetailText>
-          </Section>
-
-          <Section style={{ width: '100%', alignItems: 'flex-start' }}>
-            <Label>Status:</Label>
-            <Row>
+          <View style={styles.metaRow}>
+            <Row style={styles.metaItem}>
+              <MaterialCommunityIcons name="list-status" size={18} color={COLORS.chocolateBrown} style={styles.icon} />
+              <Label style={styles.metaLabel}>Status:</Label>
               <Badge type={task.status}><BadgeText>{task.status}</BadgeText></Badge>
             </Row>
-          </Section>
-
-          <Section style={{ width: '100%', alignItems: 'flex-start' }}>
-            <Label>Priority:</Label>
-            <Row>
+            <Row style={styles.metaItem}>
+              <MaterialCommunityIcons name="flag-outline" size={18} color={COLORS.chocolateBrown} style={styles.icon} />
+              <Label style={styles.metaLabel}>Priority:</Label>
               <Badge type={task.priority}><BadgeText>{task.priority}</BadgeText></Badge>
             </Row>
-          </Section>
+          </View>
 
           {task.dueDate && (
-            <Section style={{ width: '100%', alignItems: 'flex-start' }}>
-              <Label>Due Date:</Label>
-              <DetailText>{format(new Date(task.dueDate), 'PPPPpppp')}</DetailText>
+            <Section style={styles.sectionCard}>
+              <Row style={styles.sectionHeader}>
+                <MaterialCommunityIcons name="calendar-clock-outline" size={20} color={COLORS.deepCoffee} style={styles.icon} />
+                <Label style={styles.sectionLabel}>Due Date</Label>
+              </Row>
+              <DetailText style={styles.detailContent}>{format(new Date(task.dueDate), 'PPPPpppp')}</DetailText>
             </Section>
           )}
 
+          <Section style={styles.sectionCard}>
+            <Row style={styles.sectionHeader}>
+              <MaterialCommunityIcons name="file-document-outline" size={20} color={COLORS.deepCoffee} style={styles.icon} />
+              <Label style={styles.sectionLabel}>Description</Label>
+            </Row>
+            <DetailText style={styles.detailContent}>{task.description || 'No description provided.'}</DetailText>
+          </Section>
+
           {task.tags && task.tags.length > 0 && (
-            <Section style={{ width: '100%', alignItems: 'flex-start' }}>
-              <Label>Tags:</Label>
-              <Row>
+            <Section style={styles.sectionCard}>
+              <Row style={styles.sectionHeader}>
+                <MaterialCommunityIcons name="tag-multiple" size={20} color={COLORS.deepCoffee} style={styles.icon} />
+                <Label style={styles.sectionLabel}>Tags</Label>
+              </Row>
+              <Row style={styles.tagsContainer}>
                 {task.tags.map((tag, index) => (
                   <Badge key={index} type="default">
                     <BadgeText>{tag}</BadgeText>
@@ -195,44 +197,171 @@ const TaskDetailScreen = ({ route, navigation }) => {
           )}
 
           {task.project && (
-            <Section style={{ width: '100%', alignItems: 'flex-start' }}>
-              <Label>Project:</Label>
-              <DetailText>{task.project.name || task.project || 'N/A'}</DetailText>
+            <Section style={styles.sectionCard}>
+              <Row style={styles.sectionHeader}>
+                <MaterialCommunityIcons name="folder-outline" size={20} color={COLORS.deepCoffee} style={styles.icon} />
+                <Label style={styles.sectionLabel}>Project</Label>
+              </Row>
+              <DetailText style={styles.detailContent}>{task.project.name || task.project || 'N/A'}</DetailText>
             </Section>
           )}
 
           {task.reminders && task.reminders.length > 0 && (
-            <Section style={{ width: '100%', alignItems: 'flex-start' }}>
-              <Label>Reminders:</Label>
-              {task.reminders.map((reminder, index) => (
-                <Row key={index} style={{ backgroundColor: COLORS.softCream, padding: 8, borderRadius: 8, marginBottom: 8, width: '100%' }}>
-                  <Badge type="info" style={{ marginRight: 10, marginBottom: 5 }}>
-                    <BadgeText>{format(new Date(reminder.time), 'MMM d, p')}</BadgeText>
-                  </Badge>
-                  <Badge type="default">
-                    <BadgeText>{reminder.method}</BadgeText>
-                  </Badge>
-                </Row>
-              ))}
+            <Section style={styles.sectionCard}>
+              <Row style={styles.sectionHeader}>
+                <MaterialCommunityIcons name="bell-ring-outline" size={20} color={COLORS.deepCoffee} style={styles.icon} />
+                <Label style={styles.sectionLabel}>Reminders</Label>
+              </Row>
+              <View style={styles.remindersContainer}>
+                {task.reminders.map((reminder, index) => (
+                  <Row key={index} style={styles.reminderItem}>
+                    <Badge type="info" style={styles.reminderBadge}>
+                      <BadgeText>{format(new Date(reminder.time), 'MMM d, p')}</BadgeText>
+                    </Badge>
+                    <Badge type="default" style={styles.reminderBadge}>
+                      <BadgeText>{reminder.method}</BadgeText>
+                    </Badge>
+                  </Row>
+                ))}
+              </View>
             </Section>
           )}
 
-          <GradientButton onPress={() => navigation.navigate('TaskForm', { taskId: task._id, taskToEdit: task })} style={{ marginTop: 20 }}>
-            <GradientButtonBackground>
-              <ButtonText>Edit Task</ButtonText>
-            </GradientButtonBackground>
-          </GradientButton>
+          <Row style={styles.buttonGroup}>
+            <GradientButton onPress={() => navigation.navigate('TaskForm', { taskId: task._id, taskToEdit: task })} style={styles.editButton}>
+              <GradientButtonBackground colors={GRADIENTS.primaryButton}>
+                <Row style={styles.buttonContent}>
+                  <MaterialCommunityIcons name="pencil" size={20} color={COLORS.white} />
+                  <ButtonText>Edit Task</ButtonText>
+                </Row>
+              </GradientButtonBackground>
+            </GradientButton>
 
-          <GradientButton onPress={handleDeleteTask}>
-            <GradientButtonBackground colors={[COLORS.errorRed, '#cc0000']}>
-              <ButtonText>Delete Task</ButtonText>
-            </GradientButtonBackground>
-          </GradientButton>
+            <GradientButton onPress={handleDeleteTask} style={styles.deleteButton}>
+              <GradientButtonBackground colors={[COLORS.errorRed, '#cc0000']}>
+                <Row style={styles.buttonContent}>
+                  <MaterialCommunityIcons name="delete" size={20} color={COLORS.white} />
+                  <ButtonText>Delete Task</ButtonText>
+                </Row>
+              </GradientButtonBackground>
+            </GradientButton>
+          </Row>
 
         </ContentContainer>
       </ScrollContainer>
     </GradientBackground>
   );
 };
+
+const styles = StyleSheet.create({
+  scrollContent: {
+    flexGrow: 1,
+    paddingVertical: 20,
+  },
+  taskTitle: {
+    fontSize: 26,
+    marginBottom: 25,
+    color: COLORS.deepCoffee,
+    fontFamily: FONTS.primary,
+    fontWeight: 'bold',
+  },
+  metaRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '100%',
+    marginBottom: 25,
+    backgroundColor: COLORS.softCream,
+    paddingVertical: 15,
+    borderRadius: 12,
+    gap: 10,
+  },
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  metaLabel: {
+    fontSize: 14,
+    color: COLORS.chocolateBrown,
+    marginBottom: 0, // Reset default Label margin-bottom
+    marginTop: 0, // Reset default Label margin-top
+    fontWeight: '700',
+    fontFamily: FONTS.secondary,
+  },
+  icon: {
+    marginRight: 5,
+  },
+  sectionCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: 12,
+    padding: 18,
+    marginBottom: 15,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    width: '100%',
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.lightCocoa,
+    paddingBottom: 8,
+    gap: 8,
+  },
+  sectionLabel: {
+    fontSize: 16,
+    color: COLORS.deepCoffee,
+    fontWeight: '700',
+    fontFamily: FONTS.secondary,
+    marginBottom: 0,
+    marginTop: 0,
+  },
+  detailContent: {
+    fontSize: 16,
+    lineHeight: 24,
+    color: COLORS.deepCoffee,
+    marginTop: 8, // Added space after section header
+    fontFamily: FONTS.secondary,
+  },
+  tagsContainer: {
+    marginTop: 8,
+    flexWrap: 'wrap',
+    gap: 8, // Spacing between tags
+  },
+  remindersContainer: {
+    marginTop: 8,
+  },
+  reminderItem: {
+    flexDirection: 'row',
+    flexWrap: 'wrap', // Allow badges to wrap
+    alignItems: 'center',
+    backgroundColor: COLORS.softCream,
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 8,
+    gap: 8, // Space between badges in a reminder item
+  },
+  reminderBadge: {
+    marginBottom: 0, // Reset default badge margin
+  },
+  buttonGroup: {
+    marginTop: 30,
+    flexDirection: 'column', // Stack buttons vertically
+    width: '100%',
+  },
+  editButton: {
+    marginBottom: 10,
+  },
+  deleteButton: {
+    marginBottom: 0, // Last button doesn't need bottom margin
+  },
+  buttonContent: {
+    gap: 10,
+  },
+});
 
 export default TaskDetailScreen;

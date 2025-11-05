@@ -38,20 +38,20 @@ export const ContentContainer = styled.View`
 // Title styling
 export const Title = styled.Text`
   font-size: 28px;
-  font-weight: bold;
+  font-weight: bold; /* Poppins_700Bold from FONTS.primary */
   color: ${COLORS.deepCoffee};
   margin-bottom: 30px;
   font-family: ${FONTS.primary};
   text-align: center;
 `;
 
-// Subtitle styling
+// Subtitle styling - Changed font-weight to 700 to leverage Lato_700Bold
 export const SubTitle = styled.Text`
   font-size: 20px;
-  font-weight: 600;
+  font-weight: 700; /* Will pick up Lato_700Bold */
   color: ${COLORS.chocolateBrown};
   margin-bottom: 15px;
-  font-family: ${FONTS.secondary};
+  font-family: ${FONTS.secondary}; /* Lato_400Regular or Lato_700Bold based on weight */
   text-align: center;
 `;
 
@@ -64,11 +64,11 @@ export const Input = styled.TextInput.attrs({
   background-color: ${COLORS.white};
   border-radius: 8px;
   padding: 10px 15px;
-  margin-bottom: 15px;
+  margin-bottom: 15px; /* Consistent margin-bottom */
   font-size: 16px;
   color: ${COLORS.deepCoffee};
   border: 1px solid ${COLORS.lightCocoa};
-  font-family: ${FONTS.secondary};
+  font-family: ${FONTS.secondary}; /* Lato_400Regular */
 `;
 
 // TextArea styling
@@ -82,11 +82,11 @@ export const TextArea = styled.TextInput.attrs({
   background-color: ${COLORS.white};
   border-radius: 8px;
   padding: 10px 15px;
-  margin-bottom: 15px;
+  margin-bottom: 15px; /* Consistent margin-bottom */
   font-size: 16px;
   color: ${COLORS.deepCoffee};
   border: 1px solid ${COLORS.lightCocoa};
-  font-family: ${FONTS.secondary};
+  font-family: ${FONTS.secondary}; /* Lato_400Regular */
 `;
 
 // Button styling
@@ -124,7 +124,7 @@ export const GradientButtonBackground = styled(LinearGradient).attrs(props => ({
 export const ButtonText = styled.Text`
   color: ${COLORS.white};
   font-size: 18px;
-  font-weight: bold;
+  font-weight: bold; /* Poppins_700Bold from FONTS.primary */
   font-family: ${FONTS.primary};
 `;
 
@@ -132,7 +132,7 @@ export const ButtonText = styled.Text`
 export const LinkText = styled.Text`
   color: ${COLORS.chocolateBrown};
   font-size: 16px;
-  font-family: ${FONTS.secondary};
+  font-family: ${FONTS.secondary}; /* Lato_400Regular */
   margin-top: 10px;
   text-decoration-line: underline;
   text-align: center; /* Centered for better UX */
@@ -162,8 +162,10 @@ export const LoadingIndicator = styled.ActivityIndicator.attrs({
   margin-top: 20px;
 `;
 
-// Card styling
-export const Card = styled.TouchableOpacity`
+// Card styling - Added activeOpacity
+export const Card = styled.TouchableOpacity.attrs({
+  activeOpacity: 0.7, // Visual feedback on press
+})`
   background-color: ${COLORS.white};
   border-radius: 12px;
   padding: 15px;
@@ -177,7 +179,7 @@ export const Card = styled.TouchableOpacity`
 // Card title styling
 export const CardTitle = styled.Text`
   font-size: 18px;
-  font-weight: bold;
+  font-weight: bold; /* Poppins_700Bold from FONTS.primary */
   color: ${COLORS.deepCoffee};
   margin-bottom: 5px;
   font-family: ${FONTS.primary};
@@ -188,7 +190,7 @@ export const CardDescription = styled.Text`
   font-size: 14px;
   color: ${COLORS.deepCoffee};
   margin-bottom: 10px;
-  font-family: ${FONTS.secondary};
+  font-family: ${FONTS.secondary}; /* Lato_400Regular */
 `;
 
 // Detail text styling
@@ -196,17 +198,18 @@ export const DetailText = styled.Text`
   font-size: 15px;
   color: ${COLORS.deepCoffee};
   margin-bottom: 5px;
-  font-family: ${FONTS.secondary};
+  font-family: ${FONTS.secondary}; /* Lato_400Regular */
 `;
 
-// Label styling
+// Label styling - Added font-family and changed font-weight to 700
 export const Label = styled.Text`
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700; /* Will pick up Lato_700Bold */
   color: ${COLORS.chocolateBrown};
   margin-top: 10px;
   margin-bottom: 5px;
   align-self: flex-start;
+  font-family: ${FONTS.secondary}; /* Lato_400Regular or Lato_700Bold based on weight */
 `;
 
 // Badge styling
@@ -237,11 +240,12 @@ export const Badge = styled.View`
   margin-bottom: 5px;
 `;
 
-// Badge text styling
+// Badge text styling - Added font-family and changed font-weight to 700
 export const BadgeText = styled.Text`
   color: ${COLORS.white};
   font-size: 12px;
-  font-weight: bold;
+  font-weight: 700; /* Will pick up Lato_700Bold */
+  font-family: ${FONTS.secondary}; /* Lato_400Regular or Lato_700Bold based on weight */
 `;
 
 // Row styling
@@ -319,12 +323,15 @@ export const DateDisplayButton = styled(GradientButton).attrs({
 export const DateDisplayButtonText = styled.Text`
   color: ${COLORS.deepCoffee};
   font-size: 16px;
-  font-family: ${FONTS.secondary};
+  font-family: ${FONTS.secondary}; /* Lato_400Regular */
 `;
 
 // New components for module dashboards
 
-export const ModuleCard = styled.TouchableOpacity`
+// ModuleCard styling - Added activeOpacity
+export const ModuleCard = styled.TouchableOpacity.attrs({
+  activeOpacity: 0.7, // Visual feedback on press
+})`
   width: 100%;
   border-radius: 15px;
   overflow: hidden; /* To make sure the gradient respects the border radius */
@@ -344,16 +351,18 @@ export const ModuleCardContent = styled.View`
   margin-left: 20px;
 `;
 
+// ModuleCardTitle styling
 export const ModuleCardTitle = styled.Text`
   font-size: 22px;
-  font-weight: bold;
+  font-weight: bold; /* Poppins_700Bold from FONTS.primary */
   color: ${COLORS.white};
   font-family: ${FONTS.primary};
 `;
 
+// ModuleCardDescription styling
 export const ModuleCardDescription = styled.Text`
   font-size: 14px;
   color: ${COLORS.softCream};
-  font-family: ${FONTS.secondary};
+  font-family: ${FONTS.secondary}; /* Lato_400Regular */
   margin-top: 5px;
 `;

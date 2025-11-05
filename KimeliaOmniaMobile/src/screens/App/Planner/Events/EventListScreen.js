@@ -18,12 +18,13 @@ import {
   GradientButton,
   GradientButtonBackground,
   ButtonText,
+  SubTitle, // Added for empty state
+  DetailText, // Added for empty state
 } from '../../../../components/StyledComponents';
 import apiClient from '../../../../api/apiClient';
 import { COLORS, GRADIENTS } from '../../../../constants';
 import { format } from 'date-fns';
-
-// Removed isValidObjectId helper as we're adapting to backend's actual behavior
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons'; // Added for icons
 
 const EventListScreen = ({ navigation }) => {
   const [events, setEvents] = useState([]);
@@ -60,7 +61,6 @@ const EventListScreen = ({ navigation }) => {
   }, [fetchEvents]);
 
   const handleEventPress = (item) => {
-    // Loosened client-side validation: only check if ID is a non-empty string
     if (!item._id || typeof item._id !== 'string' || item._id.trim() === '') {
       Alert.alert(
         "Invalid Event ID",
@@ -89,14 +89,6 @@ const EventListScreen = ({ navigation }) => {
     </Card>
   );
 
-  if (loading && !refreshing) {
-    return (
-      <GradientBackground>
-        <LoadingIndicator />
-      </GradientBackground>
-    );
-  }
-
   return (
     <GradientBackground>
       <ContentContainer style={{ paddingHorizontal: 0 }}>
@@ -117,7 +109,13 @@ const EventListScreen = ({ navigation }) => {
           renderItem={renderEventItem}
           contentContainerStyle={{ paddingHorizontal: 20, width: '100%' }}
           ListEmptyComponent={
-            <ErrorText style={{ color: COLORS.deepCoffee }}>No events found. Click '+' to add one!</ErrorText>
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', marginTop: 50 }}>
+              <MaterialCommunityIcons name="calendar-check-outline" size={60} color={COLORS.lightCocoa} style={{ marginBottom: 15 }} />
+              <SubTitle style={{ color: COLORS.deepCoffee, marginBottom: 10 }}>No Events Found</SubTitle>
+              <DetailText style={{ textAlign: 'center', color: COLORS.chocolateBrown, paddingHorizontal: 20 }}>
+                Your calendar is clear! Tap the '+' button below to schedule your first event.
+              </DetailText>
+            </View>
           }
           refreshControl={
             <RefreshControl

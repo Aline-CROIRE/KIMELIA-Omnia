@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { Alert, View, Platform, TouchableOpacity, Switch, TextInput } from 'react-native';
+import { Alert, View, Platform, TouchableOpacity, Switch, TextInput, StyleSheet } from 'react-native'; // Import StyleSheet
 import { Picker } from '@react-native-picker/picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { format, isBefore, isValid } from 'date-fns';
@@ -20,9 +21,10 @@ import {
   LoadingIndicator,
   Label,
   BadgeText,
+  Row,
 } from '../../../../components/StyledComponents';
 import apiClient from '../../../../api/apiClient';
-import { COLORS, GRADIENTS } from '../../../../constants';
+import { COLORS, GRADIENTS, FONTS } from '../../../../constants'; // Import FONTS
 
 const EVENT_CATEGORIES = [
   { value: 'meeting', label: '💼 Meeting' },
@@ -73,38 +75,78 @@ const EventFormScreen = ({ route, navigation }) => {
 
   // Date/Time change handlers
   const handleStartDateChange = (event, selectedDate) => {
-    setShowStartDatePicker(Platform.OS === 'ios');
-    if (selectedDate) {
-      setStartTime(selectedDate);
-      // Auto-adjust end time if it's before start time
-      if (isBefore(endTime, selectedDate)) {
-        setEndTime(new Date(selectedDate.getTime() + 3600000));
+    const currentMode = showStartDatePicker ? 'date' : 'time';
+
+    if (Platform.OS === 'android') {
+      setShowStartDatePicker(false);
+      if (currentMode === 'date' && selectedDate && !allDay) {
+        setShowStartTimePicker(true);
+      }
+    } else {
+      setShowStartDatePicker(currentMode === 'date');
+    }
+
+    if (event?.type === 'set' && selectedDate) {
+      const newDate = new Date(startTime);
+      newDate.setFullYear(selectedDate.getFullYear());
+      newDate.setMonth(selectedDate.getMonth());
+      newDate.setDate(selectedDate.getDate());
+      setStartTime(newDate);
+      if (isBefore(endTime, newDate)) {
+        setEndTime(new Date(newDate.getTime() + 3600000));
       }
     }
   };
 
   const handleStartTimeChange = (event, selectedTime) => {
-    setShowStartTimePicker(Platform.OS === 'ios');
-    if (selectedTime) {
-      setStartTime(selectedTime);
-      // Auto-adjust end time if it's before start time
-      if (isBefore(endTime, selectedTime)) {
-        setEndTime(new Date(selectedTime.getTime() + 3600000));
+    if (Platform.OS === 'android') {
+      setShowStartTimePicker(false);
+    } else {
+      setShowStartTimePicker(Platform.OS === 'ios');
+    }
+    if (event?.type === 'set' && selectedTime) {
+      const newTime = new Date(startTime);
+      newTime.setHours(selectedTime.getHours());
+      newTime.setMinutes(selectedTime.getMinutes());
+      setStartTime(newTime);
+      if (isBefore(endTime, newTime)) {
+        setEndTime(new Date(newTime.getTime() + 3600000));
       }
     }
   };
 
   const handleEndDateChange = (event, selectedDate) => {
-    setShowEndDatePicker(Platform.OS === 'ios');
-    if (selectedDate) {
-      setEndTime(selectedDate);
+    const currentMode = showEndDatePicker ? 'date' : 'time';
+
+    if (Platform.OS === 'android') {
+      setShowEndDatePicker(false);
+      if (currentMode === 'date' && selectedDate && !allDay) {
+        setShowEndTimePicker(true);
+      }
+    } else {
+      setShowEndDatePicker(currentMode === 'date');
+    }
+
+    if (event?.type === 'set' && selectedDate) {
+      const newDate = new Date(endTime);
+      newDate.setFullYear(selectedDate.getFullYear());
+      newDate.setMonth(selectedDate.getMonth());
+      newDate.setDate(selectedDate.getDate());
+      setEndTime(newDate);
     }
   };
 
   const handleEndTimeChange = (event, selectedTime) => {
-    setShowEndTimePicker(Platform.OS === 'ios');
-    if (selectedTime) {
-      setEndTime(selectedTime);
+    if (Platform.OS === 'android') {
+      setShowEndTimePicker(false);
+    } else {
+      setShowEndTimePicker(Platform.OS === 'ios');
+    }
+    if (event?.type === 'set' && selectedTime) {
+      const newTime = new Date(endTime);
+      newTime.setHours(selectedTime.getHours());
+      newTime.setMinutes(selectedTime.getMinutes());
+      setEndTime(newTime);
     }
   };
 
@@ -127,7 +169,6 @@ const EventFormScreen = ({ route, navigation }) => {
       }
       setNewReminderDate(newDate);
       
-      // Show time picker after date on Android
       if (Platform.OS === 'android' && currentMode === 'date') {
         setTimeout(() => setShowReminderTimePicker(true), 300);
       }
@@ -232,9 +273,9 @@ const EventFormScreen = ({ route, navigation }) => {
 
   return (
     <GradientBackground>
-      <ScrollContainer>
+      <ScrollContainer contentContainerStyle={styles.scrollContent}>
         <ContentContainer>
-          <Title style={{ color: COLORS.deepCoffee, marginBottom: 20 }}>
+          <Title style={styles.formTitle}>
             {isEditing ? 'Edit Event' : 'Create New Event'}
           </Title>
 
@@ -248,23 +289,18 @@ const EventFormScreen = ({ route, navigation }) => {
             value={title}
             onChangeText={setTitle}
             editable={!loading}
+            style={styles.inputField}
           />
 
           {/* Category */}
           <Label>Category *</Label>
-          <View style={{ 
-            borderColor: getCategoryColor(category), 
-            borderWidth: 2, 
-            borderRadius: 12, 
-            marginBottom: 15, 
-            backgroundColor: COLORS.white,
-            overflow: 'hidden'
-          }}>
+          <View style={[styles.pickerWrapper, { borderColor: getCategoryColor(category) }]}>
             <Picker
               selectedValue={category}
               onValueChange={setCategory}
-              style={{ color: COLORS.deepCoffee }}
+              style={styles.picker}
               enabled={!loading}
+              itemStyle={styles.pickerItem}
             >
               {EVENT_CATEGORIES.map((cat) => (
                 <Picker.Item key={cat.value} label={cat.label} value={cat.value} />
@@ -273,152 +309,94 @@ const EventFormScreen = ({ route, navigation }) => {
           </View>
 
           {/* Start Date & Time */}
-          <View style={{ 
-            backgroundColor: COLORS.softCream, 
-            padding: 15, 
-            borderRadius: 12, 
-            marginBottom: 15 
-          }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-              <MaterialCommunityIcons name="calendar-start" size={20} color={COLORS.deepCoffee} />
-              <Label style={{ marginLeft: 8, marginBottom: 0 }}>Start Time *</Label>
+          <View style={styles.dateTimeSection}>
+            <View style={styles.dateTimeHeader}>
+              <MaterialCommunityIcons name="calendar-start" size={20} color={COLORS.deepCoffee} style={styles.icon} />
+              <Label style={styles.dateTimeLabel}>Start Time *</Label>
             </View>
             
-            <View style={{ flexDirection: 'row', gap: 10 }}>
+            <Row style={styles.dateTimePickerRow}>
               <TouchableOpacity
-                style={{
-                  flex: 1,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  borderColor: COLORS.lightCocoa,
-                  borderWidth: 1,
-                  borderRadius: 10,
-                  padding: 12,
-                  backgroundColor: COLORS.white,
-                }}
+                style={styles.dateTimePickerButton}
                 onPress={() => setShowStartDatePicker(true)}
                 disabled={loading}
               >
-                <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                  <MaterialCommunityIcons name="calendar" size={18} color={COLORS.deepCoffee} style={{ marginRight: 8 }} />
+                <View style={styles.dateTimePickerContent}>
+                  <MaterialCommunityIcons name="calendar" size={18} color={COLORS.deepCoffee} style={styles.icon} />
                   <TextInput
                     editable={false}
                     value={format(startTime, 'MMM dd, yyyy')}
-                    style={{ color: COLORS.deepCoffee }}
+                    style={styles.dateTimeText}
                   />
                 </View>
               </TouchableOpacity>
 
               {!allDay && (
                 <TouchableOpacity
-                  style={{
-                    flex: 1,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    borderColor: COLORS.lightCocoa,
-                    borderWidth: 1,
-                    borderRadius: 10,
-                    padding: 12,
-                    backgroundColor: COLORS.white,
-                  }}
+                  style={styles.dateTimePickerButton}
                   onPress={() => setShowStartTimePicker(true)}
                   disabled={loading}
                 >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                    <MaterialCommunityIcons name="clock-outline" size={18} color={COLORS.deepCoffee} style={{ marginRight: 8 }} />
+                  <View style={styles.dateTimePickerContent}>
+                    <MaterialCommunityIcons name="clock-outline" size={18} color={COLORS.deepCoffee} style={styles.icon} />
                     <TextInput
                       editable={false}
                       value={format(startTime, 'h:mm a')}
-                      style={{ color: COLORS.deepCoffee }}
+                      style={styles.dateTimeText}
                     />
                   </View>
                 </TouchableOpacity>
               )}
-            </View>
+            </Row>
           </View>
 
           {/* End Date & Time */}
-          <View style={{ 
-            backgroundColor: COLORS.softCream, 
-            padding: 15, 
-            borderRadius: 12, 
-            marginBottom: 15 
-          }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-              <MaterialCommunityIcons name="calendar-end" size={20} color={COLORS.deepCoffee} />
-              <Label style={{ marginLeft: 8, marginBottom: 0 }}>End Time *</Label>
+          <View style={styles.dateTimeSection}>
+            <View style={styles.dateTimeHeader}>
+              <MaterialCommunityIcons name="calendar-end" size={20} color={COLORS.deepCoffee} style={styles.icon} />
+              <Label style={styles.dateTimeLabel}>End Time *</Label>
             </View>
             
-            <View style={{ flexDirection: 'row', gap: 10 }}>
+            <Row style={styles.dateTimePickerRow}>
               <TouchableOpacity
-                style={{
-                  flex: 1,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  borderColor: COLORS.lightCocoa,
-                  borderWidth: 1,
-                  borderRadius: 10,
-                  padding: 12,
-                  backgroundColor: COLORS.white,
-                }}
+                style={styles.dateTimePickerButton}
                 onPress={() => setShowEndDatePicker(true)}
                 disabled={loading}
               >
-                <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                  <MaterialCommunityIcons name="calendar" size={18} color={COLORS.deepCoffee} style={{ marginRight: 8 }} />
+                <View style={styles.dateTimePickerContent}>
+                  <MaterialCommunityIcons name="calendar" size={18} color={COLORS.deepCoffee} style={styles.icon} />
                   <TextInput
                     editable={false}
                     value={format(endTime, 'MMM dd, yyyy')}
-                    style={{ color: COLORS.deepCoffee }}
+                    style={styles.dateTimeText}
                   />
                 </View>
               </TouchableOpacity>
 
               {!allDay && (
                 <TouchableOpacity
-                  style={{
-                    flex: 1,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    borderColor: COLORS.lightCocoa,
-                    borderWidth: 1,
-                    borderRadius: 10,
-                    padding: 12,
-                    backgroundColor: COLORS.white,
-                  }}
+                  style={styles.dateTimePickerButton}
                   onPress={() => setShowEndTimePicker(true)}
                   disabled={loading}
                 >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                    <MaterialCommunityIcons name="clock-outline" size={18} color={COLORS.deepCoffee} style={{ marginRight: 8 }} />
+                  <View style={styles.dateTimePickerContent}>
+                    <MaterialCommunityIcons name="clock-outline" size={18} color={COLORS.deepCoffee} style={styles.icon} />
                     <TextInput
                       editable={false}
                       value={format(endTime, 'h:mm a')}
-                      style={{ color: COLORS.deepCoffee }}
+                      style={styles.dateTimeText}
                     />
                   </View>
                 </TouchableOpacity>
               )}
-            </View>
+            </Row>
           </View>
 
           {/* All Day Toggle */}
-          <View style={{ 
-            flexDirection: 'row', 
-            alignItems: 'center', 
-            justifyContent: 'space-between',
-            backgroundColor: COLORS.softCream,
-            padding: 15,
-            borderRadius: 12,
-            marginBottom: 15
-          }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <MaterialCommunityIcons name="clock-time-eight" size={20} color={COLORS.deepCoffee} />
-              <Label style={{ marginLeft: 8, marginBottom: 0 }}>All Day Event</Label>
+          <View style={styles.allDayToggleContainer}>
+            <View style={styles.allDayToggleHeader}>
+              <MaterialCommunityIcons name="clock-time-eight" size={20} color={COLORS.deepCoffee} style={styles.icon} />
+              <Label style={styles.allDayToggleLabel}>All Day Event</Label>
             </View>
             <Switch
               onValueChange={setAllDay}
@@ -431,23 +409,14 @@ const EventFormScreen = ({ route, navigation }) => {
 
           {/* Location */}
           <Label>Location</Label>
-          <View style={{ 
-            flexDirection: 'row', 
-            alignItems: 'center',
-            borderColor: COLORS.lightCocoa,
-            borderWidth: 1,
-            borderRadius: 12,
-            marginBottom: 15,
-            backgroundColor: COLORS.white,
-            paddingHorizontal: 12
-          }}>
-            <MaterialCommunityIcons name="map-marker" size={20} color={COLORS.lightCocoa} />
+          <View style={styles.inputWithIconWrapper}>
+            <MaterialCommunityIcons name="map-marker" size={20} color={COLORS.lightCocoa} style={styles.icon} />
             <Input
               placeholder="Add location (optional)"
               value={location}
               onChangeText={setLocation}
               editable={!loading}
-              style={{ flex: 1, marginBottom: 0, borderWidth: 0 }}
+              style={styles.inputNoBorder}
             />
           </View>
 
@@ -458,21 +427,13 @@ const EventFormScreen = ({ route, navigation }) => {
             value={description}
             onChangeText={setDescription}
             editable={!loading}
+            style={styles.textAreaField}
           />
 
           {/* Attendees */}
           <Label>Attendees</Label>
-          <View style={{ 
-            flexDirection: 'row', 
-            alignItems: 'center',
-            borderColor: COLORS.lightCocoa,
-            borderWidth: 1,
-            borderRadius: 12,
-            marginBottom: 15,
-            backgroundColor: COLORS.white,
-            paddingHorizontal: 12
-          }}>
-            <MaterialCommunityIcons name="account-multiple" size={20} color={COLORS.lightCocoa} />
+          <View style={styles.inputWithIconWrapper}>
+            <MaterialCommunityIcons name="account-multiple" size={20} color={COLORS.lightCocoa} style={styles.icon} />
             <Input
               placeholder="email1@example.com, email2@example.com"
               value={attendees}
@@ -480,95 +441,63 @@ const EventFormScreen = ({ route, navigation }) => {
               editable={!loading}
               keyboardType="email-address"
               autoCapitalize="none"
-              style={{ flex: 1, marginBottom: 0, borderWidth: 0 }}
+              style={styles.inputNoBorder}
             />
           </View>
 
           {/* Reminders Section */}
-          <View style={{ 
-            width: '100%', 
-            marginTop: 10,
-            padding: 15, 
-            backgroundColor: COLORS.softCream, 
-            borderRadius: 12,
-            marginBottom: 20 
-          }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-              <MaterialCommunityIcons name="bell-ring" size={20} color={COLORS.deepCoffee} />
-              <Label style={{ marginLeft: 8, marginBottom: 0 }}>Reminders</Label>
-            </View>
+          <View style={styles.remindersSection}>
+            <Row style={styles.remindersHeader}>
+              <MaterialCommunityIcons name="bell-ring" size={20} color={COLORS.deepCoffee} style={styles.icon} />
+              <Label style={styles.remindersSectionLabel}>Reminders</Label>
+            </Row>
             
             {reminders.length > 0 ? (
               reminders.map((reminder, index) => (
                 <View
                   key={index}
-                  style={{
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    backgroundColor: COLORS.white,
-                    padding: 12,
-                    borderRadius: 10,
-                    marginBottom: 8,
-                    elevation: 2,
-                    shadowColor: '#000',
-                    shadowOffset: { width: 0, height: 2 },
-                    shadowOpacity: 0.1,
-                    shadowRadius: 3,
-                  }}
+                  style={styles.reminderItem}
                 >
-                  <View style={{ flex: 1 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-                      <MaterialCommunityIcons name="clock-outline" size={16} color={COLORS.deepCoffee} />
-                      <BadgeText style={{ marginLeft: 6, fontWeight: 'bold' }}>
-                        {format(reminder.time, 'MMM d, yyyy')}
+                  <View style={styles.reminderContent}>
+                    <Row style={styles.reminderTextRow}>
+                      <MaterialCommunityIcons name="clock-outline" size={16} color={COLORS.deepCoffee} style={styles.icon} />
+                      <BadgeText style={styles.reminderDateText}>
+                        {format(new Date(reminder.time), 'MMM d, yyyy')}
                       </BadgeText>
-                    </View>
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      <BadgeText style={{ color: COLORS.lightCocoa }}>
-                        {format(reminder.time, 'h:mm a')} • {reminder.method.replace('_', ' ')}
-                      </BadgeText>
-                    </View>
+                    </Row>
+                    <BadgeText style={styles.reminderTimeMethodText}>
+                      {format(new Date(reminder.time), 'h:mm a')} • {reminder.method.replace('_', ' ')}
+                    </BadgeText>
                   </View>
                   <TouchableOpacity 
                     onPress={() => handleRemoveReminder(index)} 
                     disabled={loading}
-                    style={{ padding: 4 }}
+                    style={styles.removeReminderButton}
                   >
                     <MaterialCommunityIcons name="delete" size={22} color={COLORS.errorRed} />
                   </TouchableOpacity>
                 </View>
               ))
             ) : (
-              <BadgeText style={{ color: COLORS.lightCocoa, textAlign: 'center', padding: 10 }}>
+              <BadgeText style={styles.noRemindersText}>
                 No reminders set
               </BadgeText>
             )}
 
-            <Label style={{ marginTop: 15, marginBottom: 8 }}>Add New Reminder</Label>
+            <Label style={styles.addReminderLabel}>Add New Reminder</Label>
             
             <TouchableOpacity
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                borderColor: COLORS.lightCocoa,
-                borderWidth: 1,
-                borderRadius: 10,
-                marginBottom: 10,
-                padding: 12,
-                backgroundColor: COLORS.white,
-              }}
+              style={styles.newReminderDatePickerButton}
               onPress={() => setShowReminderDatePicker(true)}
               disabled={loading}
             >
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <MaterialCommunityIcons name="calendar-clock" size={20} color={COLORS.deepCoffee} style={{ marginRight: 10 }} />
+              <View style={styles.newReminderDatePickerContent}>
+                <MaterialCommunityIcons name="calendar-clock" size={20} color={COLORS.deepCoffee} style={styles.icon} />
                 <View>
-                  <BadgeText style={{ fontWeight: 'bold' }}>
+                  <BadgeText style={styles.reminderDateText}>
                     {format(newReminderDate, 'MMM dd, yyyy')}
                   </BadgeText>
-                  <BadgeText style={{ color: COLORS.lightCocoa }}>
+                  <BadgeText style={styles.reminderTimeMethodText}>
                     {format(newReminderDate, 'h:mm a')}
                   </BadgeText>
                 </View>
@@ -576,50 +505,44 @@ const EventFormScreen = ({ route, navigation }) => {
               <MaterialCommunityIcons name="chevron-right" size={20} color={COLORS.lightCocoa} />
             </TouchableOpacity>
 
-            <View style={{ 
-              borderColor: COLORS.lightCocoa, 
-              borderWidth: 1, 
-              borderRadius: 10, 
-              marginBottom: 12, 
-              backgroundColor: COLORS.white,
-              overflow: 'hidden'
-            }}>
+            <View style={styles.pickerWrapper}>
               <Picker 
                 selectedValue={newReminderMethod} 
                 onValueChange={setNewReminderMethod} 
-                style={{ color: COLORS.deepCoffee }} 
+                style={styles.picker} 
                 enabled={!loading}
+                itemStyle={styles.pickerItem}
               >
                 <Picker.Item label="🔔 In-App Notification" value="app_notification" />
                 <Picker.Item label="📧 Email" value="email" />
               </Picker>
             </View>
 
-            <GradientButton onPress={handleAddReminder} disabled={loading}>
+            <GradientButton onPress={handleAddReminder} disabled={loading} style={styles.addReminderButton}>
               <GradientButtonBackground colors={GRADIENTS.secondaryButton}>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <MaterialCommunityIcons name="plus-circle" size={18} color={COLORS.deepCoffee} style={{ marginRight: 6 }} />
-                  <ButtonText style={{ color: COLORS.deepCoffee }}>Add Reminder</ButtonText>
-                </View>
+                <Row style={styles.buttonContent}>
+                  <MaterialCommunityIcons name="plus-circle" size={18} color={COLORS.deepCoffee} style={styles.icon} />
+                  <ButtonText style={styles.addReminderButtonText}>Add Reminder</ButtonText>
+                </Row>
               </GradientButtonBackground>
             </GradientButton>
           </View>
 
           {/* Submit Button */}
-          <GradientButton onPress={handleSubmit} disabled={loading} style={{ marginBottom: 30 }}>
+          <GradientButton onPress={handleSubmit} disabled={loading} style={styles.submitButton}>
             <GradientButtonBackground colors={isEditing ? GRADIENTS.primaryButton : GRADIENTS.goldAccent}>
               {loading ? (
                 <LoadingIndicator size="small" color="#fff" />
               ) : (
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Row style={styles.buttonContent}>
                   <MaterialCommunityIcons 
                     name={isEditing ? "content-save" : "calendar-plus"} 
                     size={20} 
                     color="#fff" 
-                    style={{ marginRight: 8 }} 
+                    style={styles.icon} 
                   />
                   <ButtonText>{isEditing ? 'Update Event' : 'Create Event'}</ButtonText>
-                </View>
+                </Row>
               )}
             </GradientButtonBackground>
           </GradientButton>
@@ -686,5 +609,228 @@ const EventFormScreen = ({ route, navigation }) => {
     </GradientBackground>
   );
 };
+
+const styles = StyleSheet.create({
+  scrollContent: {
+    flexGrow: 1,
+    paddingVertical: 20,
+  },
+  formTitle: {
+    fontSize: 26,
+    marginBottom: 25,
+    color: COLORS.deepCoffee,
+    fontFamily: FONTS.primary,
+    fontWeight: 'bold',
+  },
+  inputField: {
+    marginBottom: 15,
+  },
+  textAreaField: {
+    marginBottom: 15,
+  },
+  pickerWrapper: {
+    borderWidth: 2,
+    borderRadius: 12,
+    backgroundColor: COLORS.white,
+    overflow: 'hidden',
+    height: 55,
+    justifyContent: 'center',
+    marginBottom: 15,
+  },
+  picker: {
+    color: COLORS.deepCoffee,
+    height: 55,
+  },
+  pickerItem: {
+    height: 55,
+  },
+  dateTimeSection: {
+    backgroundColor: COLORS.softCream,
+    padding: 15,
+    borderRadius: 12,
+    marginBottom: 15,
+  },
+  dateTimeHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  dateTimeLabel: {
+    marginLeft: 8,
+    marginBottom: 0,
+    marginTop: 0,
+    fontSize: 16,
+    color: COLORS.deepCoffee,
+  },
+  dateTimePickerRow: {
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  dateTimePickerButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderColor: COLORS.lightCocoa,
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 12,
+    backgroundColor: COLORS.white,
+    height: 50,
+  },
+  dateTimePickerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  dateTimeText: {
+    color: COLORS.deepCoffee,
+    flex: 1,
+    paddingVertical: 0,
+    fontFamily: FONTS.secondary,
+    fontSize: 14,
+  },
+  allDayToggleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: COLORS.softCream,
+    padding: 15,
+    borderRadius: 12,
+    marginBottom: 15,
+  },
+  allDayToggleHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  allDayToggleLabel: {
+    marginLeft: 8,
+    marginBottom: 0,
+    marginTop: 0,
+    fontSize: 16,
+    color: COLORS.deepCoffee,
+  },
+  inputWithIconWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderColor: COLORS.lightCocoa,
+    borderWidth: 1,
+    borderRadius: 12,
+    marginBottom: 15,
+    backgroundColor: COLORS.white,
+    paddingHorizontal: 12,
+    height: 50,
+  },
+  inputNoBorder: {
+    flex: 1,
+    marginBottom: 0,
+    borderWidth: 0,
+    height: '100%',
+    paddingVertical: 0,
+  },
+  icon: {
+    marginRight: 8,
+  },
+  remindersSection: {
+    width: '100%',
+    marginTop: 20,
+    padding: 15,
+    backgroundColor: COLORS.softCream,
+    borderRadius: 12,
+    marginBottom: 20,
+  },
+  remindersHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  remindersSectionLabel: {
+    marginLeft: 8,
+    marginBottom: 0,
+    marginTop: 0,
+    fontSize: 16,
+    color: COLORS.deepCoffee,
+  },
+  reminderItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: COLORS.white,
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 8,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+  },
+  reminderContent: {
+    flex: 1,
+  },
+  reminderTextRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+    gap: 6,
+  },
+  reminderDateText: {
+    fontWeight: 'bold',
+    fontFamily: FONTS.secondary,
+    color: COLORS.deepCoffee,
+  },
+  reminderTimeMethodText: {
+    color: COLORS.lightCocoa,
+    fontFamily: FONTS.secondary,
+    fontSize: 12,
+  },
+  removeReminderButton: {
+    padding: 4,
+  },
+  noRemindersText: {
+    color: COLORS.lightCocoa,
+    textAlign: 'center',
+    padding: 10,
+    fontFamily: FONTS.secondary,
+  },
+  addReminderLabel: {
+    marginTop: 15,
+    marginBottom: 8,
+    fontSize: 14,
+    color: COLORS.chocolateBrown,
+  },
+  newReminderDatePickerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderColor: COLORS.lightCocoa,
+    borderWidth: 1,
+    borderRadius: 10,
+    marginBottom: 10,
+    padding: 12,
+    backgroundColor: COLORS.white,
+    height: 50,
+  },
+  newReminderDatePickerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  addReminderButton: {
+    marginTop: 5,
+  },
+  addReminderButtonText: {
+    color: COLORS.deepCoffee,
+    fontSize: 16,
+  },
+  submitButton: {
+    marginBottom: 30,
+    marginTop: 20,
+  },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+});
 
 export default EventFormScreen;

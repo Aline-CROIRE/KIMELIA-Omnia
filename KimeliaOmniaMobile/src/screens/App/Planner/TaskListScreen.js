@@ -6,7 +6,7 @@ import {
   ContentContainer,
   Title,
   LoadingIndicator,
-  ErrorText,
+  ErrorText, // Still available for actual errors
   Card,
   CardTitle,
   CardDescription,
@@ -18,12 +18,13 @@ import {
   GradientButton,
   GradientButtonBackground,
   ButtonText,
+  SubTitle, // Added for empty state
+  DetailText, // Added for empty state
 } from '../../../components/StyledComponents';
 import apiClient from '../../../api/apiClient';
 import { COLORS, GRADIENTS } from '../../../constants';
 import { format } from 'date-fns';
-
-// Removed isValidObjectId helper as we're adapting to backend's actual behavior
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons'; // Added for icons
 
 const TaskListScreen = ({ navigation }) => {
   const [tasks, setTasks] = useState([]);
@@ -60,7 +61,6 @@ const TaskListScreen = ({ navigation }) => {
   }, [fetchTasks]);
 
   const handleTaskPress = (item) => {
-    // Loosened client-side validation: only check if ID is a non-empty string
     if (!item._id || typeof item._id !== 'string' || item._id.trim() === '') {
       Alert.alert(
         "Invalid Task ID",
@@ -92,14 +92,6 @@ const TaskListScreen = ({ navigation }) => {
     </Card>
   );
 
-  if (loading && !refreshing) {
-    return (
-      <GradientBackground>
-        <LoadingIndicator />
-      </GradientBackground>
-    );
-  }
-
   return (
     <GradientBackground>
       <ContentContainer style={{ paddingHorizontal: 0 }}>
@@ -120,7 +112,13 @@ const TaskListScreen = ({ navigation }) => {
           renderItem={renderTaskItem}
           contentContainerStyle={{ paddingHorizontal: 20, width: '100%' }}
           ListEmptyComponent={
-            <ErrorText style={{ color: COLORS.deepCoffee }}>No tasks found. Click '+' to add one!</ErrorText>
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', marginTop: 50 }}>
+              <MaterialCommunityIcons name="clipboard-list-outline" size={60} color={COLORS.lightCocoa} style={{ marginBottom: 15 }} />
+              <SubTitle style={{ color: COLORS.deepCoffee, marginBottom: 10 }}>No Tasks Found</SubTitle>
+              <DetailText style={{ textAlign: 'center', color: COLORS.chocolateBrown, paddingHorizontal: 20 }}>
+                Looks like your to-do list is empty! Tap the '+' button below to add your first task.
+              </DetailText>
+            </View>
           }
           refreshControl={
             <RefreshControl

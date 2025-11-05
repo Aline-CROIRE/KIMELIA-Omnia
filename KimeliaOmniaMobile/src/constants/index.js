@@ -23,7 +23,9 @@ export const GRADIENTS = {
 };
 
 export const FONTS = {
-    primary: 'System', // Placeholder for Poppins or Nunito Sans
-    secondary: 'System', // Placeholder for Lato or Inter
-    logo: 'System', // Placeholder for a bold, sans-serif font
+    // Updated font names to match loaded fonts
+    primary: 'Poppins_700Bold',   // For main titles, bold text
+    secondary: 'Lato_400Regular', // For body text, descriptions
+    logo: 'Poppins_600SemiBold',  // For logo text (KIMELIA Omnia)
+    // You can add more specific weights if needed, e.g., 'Poppins_400Regular_Text'
 };
