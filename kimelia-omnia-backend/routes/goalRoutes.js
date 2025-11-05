@@ -8,7 +8,7 @@ const {
 } = require('../controllers/goalController');
 const { protect } = require('../middleware/authMiddleware');
 const {
-    // validateId is REMOVED from import, as per your Task/Event routes
+   
     validateCreateGoal,
     validateUpdateGoal
 } = require('../middleware/validationMiddleware');

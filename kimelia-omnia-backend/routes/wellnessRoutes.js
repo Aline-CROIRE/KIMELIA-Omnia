@@ -9,7 +9,7 @@ const {
 } = require('../controllers/wellnessController');
 const { protect } = require('../middleware/authMiddleware');
 const {
-    validateId, // For record ID in params
+ 
     validateCreateWellnessRecord,
     validateUpdateWellnessRecord,
     validateWellnessSuggestion
@@ -240,9 +240,9 @@ router.route('/wellness-records')
  *         $ref: '#/components/responses/ServerError'
  */
 router.route('/wellness-records/:id')
-    .get(validateId, getWellnessRecord)
-    .put(validateId, validateUpdateWellnessRecord, updateWellnessRecord)
-    .delete(validateId, deleteWellnessRecord);
+    .get(getWellnessRecord)
+    .put( validateUpdateWellnessRecord, updateWellnessRecord)
+    .delete(deleteWellnessRecord);
 
 /**
  * @swagger

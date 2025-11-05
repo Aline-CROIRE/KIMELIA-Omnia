@@ -1,7 +1,28 @@
+
 const asyncHandler = require('../utils/asyncHandler');
 const User = require('../models/User');
 const { Types } = require('mongoose'); // Import Mongoose Types for ObjectId validation
+// const Goal = require('../models/Goal'); // Uncomment if you want to use Goal model for admin data
 
+// @desc    Access admin-specific data
+// @route   GET /api/v1/auth/admin-data
+// @access  Private (Admin only)
+const getAdminData = asyncHandler(async (req, res) => {
+  // Authorization middleware 'authorizeRoles('admin')' will handle the role check.
+  // This controller can now focus on fetching data.
+
+  const totalUsers = await User.countDocuments();
+  // const activeGoals = await Goal.countDocuments({ status: 'active' }); // Example, uncomment if Goal model is used
+
+  res.status(200).json({
+    success: true,
+    data: {
+      message: 'Welcome to the Admin Dashboard!',
+      totalUsers,
+      // activeGoals, // Uncomment if used
+    },
+  });
+});
 
 // @desc    Get all users (Admin Only)
 // @route   GET /api/v1/admin/users
@@ -20,7 +41,7 @@ const getAllUsers = asyncHandler(async (req, res) => {
 // @route   GET /api/v1/admin/users/:id
 // @access  Private/Admin
 const getUserById = asyncHandler(async (req, res) => {
-  // --- NEW: Manual validation for ID ---
+  // --- Manual validation for ID, matching other controllers ---
   if (!Types.ObjectId.isValid(req.params.id)) {
     res.status(400);
     throw new Error('Invalid User ID format.');
@@ -44,7 +65,7 @@ const getUserById = asyncHandler(async (req, res) => {
 // @route   PUT /api/v1/admin/users/:id
 // @access  Private/Admin
 const updateUser = asyncHandler(async (req, res) => {
-    // --- NEW: Manual validation for ID ---
+    // --- Manual validation for ID, matching other controllers ---
     if (!Types.ObjectId.isValid(req.params.id)) {
       res.status(400);
       throw new Error('Invalid User ID format.');
@@ -91,7 +112,7 @@ const updateUser = asyncHandler(async (req, res) => {
 // @route   DELETE /api/v1/admin/users/:id
 // @access  Private/Admin
 const deleteUser = asyncHandler(async (req, res) => {
-  // --- NEW: Manual validation for ID ---
+  // --- Manual validation for ID, matching other controllers ---
   if (!Types.ObjectId.isValid(req.params.id)) {
     res.status(400);
     throw new Error('Invalid User ID format.');
@@ -120,6 +141,7 @@ const deleteUser = asyncHandler(async (req, res) => {
 
 
 module.exports = {
+  getAdminData,
   getAllUsers,
   getUserById,
   updateUser,

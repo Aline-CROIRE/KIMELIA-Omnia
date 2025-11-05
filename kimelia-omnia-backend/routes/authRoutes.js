@@ -12,7 +12,7 @@ const {
     validateLogin,
     validateVerifyEmail,
     validateUpdateUserProfile,
-    validateId // Needed for admin routes, but often imported globally if all IDs are validated similarly
+
 } = require('../middleware/validationMiddleware');
 const router = express.Router();
 

@@ -1,6 +1,8 @@
 const asyncHandler = require('../utils/asyncHandler');
 const Budget = require('../models/Budget');
 const Expense = require('../models/Expense'); // To calculate actual spending against budget (future)
+const { Types } = require('mongoose'); // --- NEW: Import Mongoose Types for ObjectId validation ---
+
 
 // @desc    Get all budgets for the authenticated user
 // @route   GET /api/v1/budgets
@@ -30,6 +32,13 @@ const getBudgets = asyncHandler(async (req, res) => {
 // @route   GET /api/v1/budgets/:id
 // @access  Private
 const getBudget = asyncHandler(async (req, res) => {
+  // --- NEW: Manual validation for ID, matching other controllers ---
+  if (!Types.ObjectId.isValid(req.params.id)) {
+    res.status(400);
+    throw new Error('Invalid Budget ID format.');
+  }
+  // --- END NEW VALIDATION ---
+
   const budget = await Budget.findById(req.params.id);
 
   if (!budget) {
@@ -64,7 +73,7 @@ const createBudget = asyncHandler(async (req, res) => {
       throw new Error('Budget end date must be after start date.');
   }
 
-  // Optional: Prevent overlapping budgets for the same category/period for a user
+  // Optional: Prevent overlapping budgets for the same category/period for a user (uncomment if desired)
   // const existingBudget = await Budget.findOne({
   //     user: req.user._id,
   //     category: req.body.category,
@@ -93,6 +102,13 @@ const createBudget = asyncHandler(async (req, res) => {
 // @route   PUT /api/v1/budgets/:id
 // @access  Private
 const updateBudget = asyncHandler(async (req, res) => {
+  // --- NEW: Manual validation for ID, matching other controllers ---
+  if (!Types.ObjectId.isValid(req.params.id)) {
+    res.status(400);
+    throw new Error('Invalid Budget ID format.');
+  }
+  // --- END NEW VALIDATION ---
+
   let budget = await Budget.findById(req.params.id);
 
   if (!budget) {
@@ -135,6 +151,13 @@ const updateBudget = asyncHandler(async (req, res) => {
 // @route   DELETE /api/v1/budgets/:id
 // @access  Private
 const deleteBudget = asyncHandler(async (req, res) => {
+  // --- NEW: Manual validation for ID, matching other controllers ---
+  if (!Types.ObjectId.isValid(req.params.id)) {
+    res.status(400);
+    throw new Error('Invalid Budget ID format.');
+  }
+  // --- END NEW VALIDATION ---
+
   const budget = await Budget.findById(req.params.id);
 
   if (!budget) {

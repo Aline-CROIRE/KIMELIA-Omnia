@@ -8,7 +8,7 @@ const {
 } = require('../controllers/taskController');
 const { protect } = require('../middleware/authMiddleware');
 const {
-    // validateId is REMOVED here from import
+   
     validateCreateTask,
     validateUpdateTask
 } = require('../middleware/validationMiddleware');
@@ -271,9 +271,9 @@ router.route('/')
  *         $ref: '#/components/responses/ServerError'
  */
 router.route('/:id')
-    // REMOVED .all() debugging middleware
-    .get(getTask) // validateId is removed
-    .put(validateUpdateTask, updateTask) // validateId is removed
-    .delete(deleteTask); // validateId is removed
+  
+    .get(getTask) 
+    .put(validateUpdateTask, updateTask) 
+    .delete(deleteTask); 
 
 module.exports = router;
