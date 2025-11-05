@@ -18,10 +18,13 @@ import {
   GradientButton,
   GradientButtonBackground,
   ButtonText,
+  SubTitle, // Added for empty state
+  DetailText, // Added for empty state
 } from '../../../components/StyledComponents';
 import apiClient from '../../../api/apiClient';
 import { COLORS, GRADIENTS } from '../../../constants';
 import { format } from 'date-fns';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons'; // Added for icons
 
 const MessageListScreen = ({ navigation }) => {
   const [messages, setMessages] = useState([]);
@@ -91,14 +94,6 @@ const MessageListScreen = ({ navigation }) => {
     </Card>
   );
 
-  if (loading && !refreshing) {
-    return (
-      <GradientBackground>
-        <LoadingIndicator />
-      </GradientBackground>
-    );
-  }
-
   return (
     <GradientBackground>
       <ContentContainer style={{ paddingHorizontal: 0 }}>
@@ -121,7 +116,13 @@ const MessageListScreen = ({ navigation }) => {
           renderItem={renderMessageItem}
           contentContainerStyle={{ paddingHorizontal: 20, width: '100%' }}
           ListEmptyComponent={
-            <ErrorText style={{ color: COLORS.deepCoffee }}>No messages found. Click '+' to add one!</ErrorText>
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', marginTop: 50 }}>
+              <MaterialCommunityIcons name="message-text-outline" size={60} color={COLORS.lightCocoa} style={{ marginBottom: 15 }} />
+              <SubTitle style={{ color: COLORS.deepCoffee, marginBottom: 10 }}>No Messages Found</SubTitle>
+              <DetailText style={{ textAlign: 'center', color: COLORS.chocolateBrown, paddingHorizontal: 20 }}>
+                Your inbox is empty! Tap the '+' button below to create your first message.
+              </DetailText>
+            </View>
           }
           refreshControl={
             <RefreshControl

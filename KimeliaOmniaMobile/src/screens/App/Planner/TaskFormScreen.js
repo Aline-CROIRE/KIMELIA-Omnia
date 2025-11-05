@@ -1,5 +1,7 @@
+
+
 import React, { useState, useEffect } from 'react';
-import { Alert, View, TouchableOpacity, TextInput, ScrollView, Platform } from 'react-native';
+import { Alert, View, TouchableOpacity, TextInput, ScrollView, Platform, StyleSheet } from 'react-native'; // Import StyleSheet
 import { format, isValid, parseISO } from 'date-fns';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { Picker } from '@react-native-picker/picker';
@@ -24,7 +26,7 @@ import {
   BadgeText,
 } from '../../../components/StyledComponents';
 import apiClient from '../../../api/apiClient';
-import { COLORS, GRADIENTS } from '../../../constants';
+import { COLORS, GRADIENTS, FONTS } from '../../../constants'; // Import FONTS
 
 const TaskFormScreen = ({ route, navigation }) => {
   const { taskId, taskToEdit } = route.params || {};
@@ -39,7 +41,7 @@ const TaskFormScreen = ({ route, navigation }) => {
   const [tags, setTags] = useState(taskToEdit?.tags ? taskToEdit.tags.join(', ') : '');
   const [selectedProjectId, setSelectedProjectId] = useState(taskToEdit?.project?._id || '');
   const [projects, setProjects] = useState([]);
-  const [reminders, setReminders] = useState(taskToEdit?.reminders || []);
+  const [reminders, setReminders] = useState(taskToEdit?.reminders?.map(r => ({ ...r, time: new Date(r.time) })) || []);
   const [newReminderDate, setNewReminderDate] = useState(new Date());
   const [showReminderDatePicker, setShowReminderDatePicker] = useState(false);
   const [showReminderTimePicker, setShowReminderTimePicker] = useState(false);
@@ -68,38 +70,65 @@ const TaskFormScreen = ({ route, navigation }) => {
   }, [isEditing, navigation]);
 
   const handleDueDateChange = (event, selectedDate) => {
-    setShowDueDatePicker(Platform.OS === 'ios');
-    if (selectedDate) {
+    if (Platform.OS === 'android') {
+      setShowDueDatePicker(false);
+    } else {
+      setShowDueDatePicker(Platform.OS === 'ios');
+    }
+
+    if (event?.type === 'set' && selectedDate) {
       setDueDate(selectedDate);
     }
   };
 
   const handleReminderDateChange = (event, selectedDate) => {
-    setShowReminderDatePicker(Platform.OS === 'ios');
-    if (selectedDate) {
-      setNewReminderDate(selectedDate);
-      // Automatically show time picker after date is selected (Android)
-      if (Platform.OS === 'android') {
-        setShowReminderTimePicker(true);
+    const currentMode = showReminderDatePicker ? 'date' : 'time';
+    
+    if (Platform.OS === 'android') {
+      setShowReminderDatePicker(false);
+      setShowReminderTimePicker(false);
+    } else {
+      setShowReminderDatePicker(Platform.OS === 'ios');
+    }
+    
+    if (event?.type === 'set' && selectedDate) {
+      const newDate = new Date(newReminderDate);
+      if (currentMode === 'date') {
+        newDate.setFullYear(selectedDate.getFullYear());
+        newDate.setMonth(selectedDate.getMonth());
+        newDate.setDate(selectedDate.getDate());
+      }
+      setNewReminderDate(newDate);
+      
+      if (Platform.OS === 'android' && currentMode === 'date') {
+        setTimeout(() => setShowReminderTimePicker(true), 300);
       }
     }
   };
 
   const handleReminderTimeChange = (event, selectedTime) => {
-    setShowReminderTimePicker(Platform.OS === 'ios');
-    if (selectedTime) {
-      setNewReminderDate(selectedTime);
+    if (Platform.OS === 'android') {
+      setShowReminderTimePicker(false);
+    } else {
+      setShowReminderTimePicker(Platform.OS === 'ios');
+    }
+    
+    if (event?.type === 'set' && selectedTime) {
+      const newDate = new Date(newReminderDate);
+      newDate.setHours(selectedTime.getHours());
+      newDate.setMinutes(selectedTime.getMinutes());
+      setNewReminderDate(newDate);
     }
   };
 
   const handleAddReminder = () => {
-    if (!newReminderDate) {
-      Alert.alert('Error', 'Please select a date and time for the reminder.');
+    if (!newReminderDate || !isValid(newReminderDate)) {
+      Alert.alert('Error', 'Please set a valid date and time for the reminder.');
       return;
     }
 
     setReminders([...reminders, { time: newReminderDate.toISOString(), method: newReminderMethod }]);
-    setNewReminderDate(new Date()); // Reset to current date/time
+    setNewReminderDate(new Date());
   };
 
   const handleRemoveReminder = (index) => {
@@ -146,8 +175,10 @@ const TaskFormScreen = ({ route, navigation }) => {
       navigation.goBack();
     } catch (e) {
       console.error("Task form error:", e.response?.data || e.message);
-      setError('Failed to save task. Please try again.');
-      Alert.alert('Error', 'Failed to save task. Please try again.');
+      const backendMessage = e.response?.data?.message;
+      const displayError = backendMessage || 'Failed to save task. Please try again.';
+      setError(displayError);
+      Alert.alert('Error', displayError);
     } finally {
       setLoading(false);
     }
@@ -176,9 +207,9 @@ const TaskFormScreen = ({ route, navigation }) => {
 
   return (
     <GradientBackground>
-      <ScrollContainer>
+      <ScrollContainer contentContainerStyle={styles.scrollContent}>
         <ContentContainer>
-          <Title style={{ color: COLORS.deepCoffee, marginBottom: 20 }}>
+          <Title style={styles.formTitle}>
             {isEditing ? 'Edit Task' : 'Create New Task'}
           </Title>
 
@@ -192,6 +223,7 @@ const TaskFormScreen = ({ route, navigation }) => {
             value={title} 
             onChangeText={setTitle} 
             editable={!loading} 
+            style={styles.inputField}
           />
 
           {/* Description */}
@@ -201,37 +233,28 @@ const TaskFormScreen = ({ route, navigation }) => {
             value={description}
             onChangeText={setDescription}
             editable={!loading}
+            style={styles.textAreaField}
           />
 
           {/* Due Date */}
           <Label>Due Date</Label>
           <TouchableOpacity 
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              borderColor: COLORS.lightCocoa,
-              borderWidth: 1,
-              borderRadius: 12,
-              marginBottom: 15,
-              padding: 14,
-              backgroundColor: COLORS.white,
-            }}
+            style={styles.datePickerButton}
             onPress={() => setShowDueDatePicker(true)}
             disabled={loading}
           >
-            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-              <MaterialCommunityIcons name="calendar" size={20} color={COLORS.deepCoffee} style={{ marginRight: 10 }} />
+            <View style={styles.datePickerContent}>
+              <MaterialCommunityIcons name="calendar" size={20} color={COLORS.deepCoffee} style={styles.icon} />
               <TextInput
                 editable={false}
                 placeholder="Select due date (optional)"
                 value={dueDate ? format(dueDate, 'MMM dd, yyyy') : ''}
-                style={{ color: COLORS.deepCoffee, flex: 1 }}
+                style={styles.datePickerText}
                 placeholderTextColor={COLORS.lightCocoa}
               />
             </View>
             {dueDate && (
-              <TouchableOpacity onPress={clearDueDate} style={{ padding: 4 }}>
+              <TouchableOpacity onPress={clearDueDate} style={styles.clearButton}>
                 <MaterialCommunityIcons name="close-circle" size={20} color={COLORS.errorRed} />
               </TouchableOpacity>
             )}
@@ -247,21 +270,16 @@ const TaskFormScreen = ({ route, navigation }) => {
           )}
 
           {/* Priority and Status Row */}
-          <View style={{ flexDirection: 'row', gap: 10, marginBottom: 15 }}>
-            <View style={{ flex: 1 }}>
+          <Row style={styles.pickerRow}>
+            <View style={styles.pickerContainer}>
               <Label>Priority *</Label>
-              <View style={{ 
-                borderColor: getPriorityColor(priority), 
-                borderWidth: 2, 
-                borderRadius: 12, 
-                backgroundColor: COLORS.white,
-                overflow: 'hidden'
-              }}>
+              <View style={[styles.pickerWrapper, { borderColor: getPriorityColor(priority) }]}>
                 <Picker 
                   selectedValue={priority} 
                   onValueChange={setPriority} 
-                  style={{ color: COLORS.deepCoffee }} 
+                  style={styles.picker} 
                   enabled={!loading}
+                  itemStyle={styles.pickerItem}
                 >
                   <Picker.Item label="🔵 Low" value="low" />
                   <Picker.Item label="🟢 Medium" value="medium" />
@@ -271,20 +289,15 @@ const TaskFormScreen = ({ route, navigation }) => {
               </View>
             </View>
 
-            <View style={{ flex: 1 }}>
+            <View style={styles.pickerContainer}>
               <Label>Status *</Label>
-              <View style={{ 
-                borderColor: getStatusColor(status), 
-                borderWidth: 2, 
-                borderRadius: 12, 
-                backgroundColor: COLORS.white,
-                overflow: 'hidden'
-              }}>
+              <View style={[styles.pickerWrapper, { borderColor: getStatusColor(status) }]}>
                 <Picker 
                   selectedValue={status} 
                   onValueChange={setStatus} 
-                  style={{ color: COLORS.deepCoffee }} 
+                  style={styles.picker} 
                   enabled={!loading}
+                  itemStyle={styles.pickerItem}
                 >
                   <Picker.Item label="⏳ Pending" value="pending" />
                   <Picker.Item label="🔄 In Progress" value="in-progress" />
@@ -294,7 +307,7 @@ const TaskFormScreen = ({ route, navigation }) => {
                 </Picker>
               </View>
             </View>
-          </View>
+          </Row>
 
           {/* Tags */}
           <Label>Tags</Label>
@@ -303,24 +316,18 @@ const TaskFormScreen = ({ route, navigation }) => {
             value={tags} 
             onChangeText={setTags} 
             editable={!loading} 
+            style={styles.inputField}
           />
 
           {/* Project */}
           <Label>Project</Label>
-          <View style={{ 
-            width: '100%', 
-            borderColor: COLORS.lightCocoa, 
-            borderWidth: 1, 
-            borderRadius: 12, 
-            marginBottom: 15, 
-            backgroundColor: COLORS.white,
-            overflow: 'hidden'
-          }}>
+          <View style={[styles.pickerWrapper, { borderColor: COLORS.lightCocoa }]}>
             <Picker 
               selectedValue={selectedProjectId} 
               onValueChange={setSelectedProjectId} 
-              style={{ color: COLORS.deepCoffee }} 
+              style={styles.picker} 
               enabled={!loading}
+              itemStyle={styles.pickerItem}
             >
               <Picker.Item label="📁 No Project (Optional)" value="" />
               {projects.map((proj) => (
@@ -330,90 +337,58 @@ const TaskFormScreen = ({ route, navigation }) => {
           </View>
 
           {/* Reminders Section */}
-          <View style={{ 
-            width: '100%', 
-            marginTop: 20, 
-            padding: 15, 
-            backgroundColor: COLORS.softCream, 
-            borderRadius: 12,
-            marginBottom: 20 
-          }}>
-            <Label style={{ marginBottom: 10 }}>
-              <MaterialCommunityIcons name="bell-ring" size={18} color={COLORS.deepCoffee} /> Reminders
-            </Label>
+          <View style={styles.remindersSection}>
+            <Row style={styles.remindersHeader}>
+              <MaterialCommunityIcons name="bell-ring" size={20} color={COLORS.deepCoffee} style={styles.icon} />
+              <Label style={styles.remindersSectionLabel}>Reminders</Label>
+            </Row>
             
             {reminders.length > 0 ? (
               reminders.map((reminder, index) => (
                 <View
                   key={index}
-                  style={{
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    backgroundColor: COLORS.white,
-                    padding: 12,
-                    borderRadius: 10,
-                    marginBottom: 8,
-                    elevation: 2,
-                    shadowColor: '#000',
-                    shadowOffset: { width: 0, height: 2 },
-                    shadowOpacity: 0.1,
-                    shadowRadius: 3,
-                  }}
+                  style={styles.reminderItem}
                 >
-                  <View style={{ flex: 1 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-                      <MaterialCommunityIcons name="clock-outline" size={16} color={COLORS.deepCoffee} />
-                      <BadgeText style={{ marginLeft: 6, fontWeight: 'bold' }}>
+                  <View style={styles.reminderContent}>
+                    <Row style={styles.reminderTextRow}>
+                      <MaterialCommunityIcons name="clock-outline" size={16} color={COLORS.deepCoffee} style={styles.icon} />
+                      <BadgeText style={styles.reminderDateText}>
                         {format(new Date(reminder.time), 'MMM d, yyyy')}
                       </BadgeText>
-                    </View>
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      <BadgeText style={{ color: COLORS.lightCocoa }}>
-                        {format(new Date(reminder.time), 'h:mm a')} • {reminder.method.replace('_', ' ')}
-                      </BadgeText>
-                    </View>
+                    </Row>
+                    <BadgeText style={styles.reminderTimeMethodText}>
+                      {format(new Date(reminder.time), 'h:mm a')} • {reminder.method.replace('_', ' ')}
+                    </BadgeText>
                   </View>
                   <TouchableOpacity 
                     onPress={() => handleRemoveReminder(index)} 
                     disabled={loading}
-                    style={{ padding: 4 }}
+                    style={styles.removeReminderButton}
                   >
                     <MaterialCommunityIcons name="delete" size={22} color={COLORS.errorRed} />
                   </TouchableOpacity>
                 </View>
               ))
             ) : (
-              <BadgeText style={{ color: COLORS.lightCocoa, textAlign: 'center', padding: 10 }}>
+              <BadgeText style={styles.noRemindersText}>
                 No reminders set
               </BadgeText>
             )}
 
-            <Label style={{ marginTop: 15, marginBottom: 8 }}>Add New Reminder</Label>
+            <Label style={styles.addReminderLabel}>Add New Reminder</Label>
             
-            {/* Reminder Date/Time Selector */}
             <TouchableOpacity
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                borderColor: COLORS.lightCocoa,
-                borderWidth: 1,
-                borderRadius: 10,
-                marginBottom: 10,
-                padding: 12,
-                backgroundColor: COLORS.white,
-              }}
+              style={styles.newReminderDatePickerButton}
               onPress={() => setShowReminderDatePicker(true)}
               disabled={loading}
             >
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <MaterialCommunityIcons name="calendar-clock" size={20} color={COLORS.deepCoffee} style={{ marginRight: 10 }} />
+              <View style={styles.newReminderDatePickerContent}>
+                <MaterialCommunityIcons name="calendar-clock" size={20} color={COLORS.deepCoffee} style={styles.icon} />
                 <View>
-                  <BadgeText style={{ fontWeight: 'bold' }}>
+                  <BadgeText style={styles.reminderDateText}>
                     {format(newReminderDate, 'MMM dd, yyyy')}
                   </BadgeText>
-                  <BadgeText style={{ color: COLORS.lightCocoa }}>
+                  <BadgeText style={styles.reminderTimeMethodText}>
                     {format(newReminderDate, 'h:mm a')}
                   </BadgeText>
                 </View>
@@ -421,100 +396,254 @@ const TaskFormScreen = ({ route, navigation }) => {
               <MaterialCommunityIcons name="chevron-right" size={20} color={COLORS.lightCocoa} />
             </TouchableOpacity>
 
-            {showReminderDatePicker && (
-              <DateTimePicker
-                value={newReminderDate}
-                mode="date"
-                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                onChange={handleReminderDateChange}
-              />
-            )}
-
-            {showReminderTimePicker && (
-              <DateTimePicker
-                value={newReminderDate}
-                mode="time"
-                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                onChange={handleReminderTimeChange}
-              />
-            )}
-
-            {Platform.OS === 'ios' && (
-              <TouchableOpacity
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  borderColor: COLORS.lightCocoa,
-                  borderWidth: 1,
-                  borderRadius: 10,
-                  marginBottom: 10,
-                  padding: 12,
-                  backgroundColor: COLORS.white,
-                }}
-                onPress={() => setShowReminderTimePicker(true)}
-                disabled={loading}
-              >
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <MaterialCommunityIcons name="clock-outline" size={20} color={COLORS.deepCoffee} style={{ marginRight: 10 }} />
-                  <BadgeText>{format(newReminderDate, 'h:mm a')}</BadgeText>
-                </View>
-                <MaterialCommunityIcons name="chevron-right" size={20} color={COLORS.lightCocoa} />
-              </TouchableOpacity>
-            )}
-
-            {/* Reminder Method */}
-            <View style={{ 
-              borderColor: COLORS.lightCocoa, 
-              borderWidth: 1, 
-              borderRadius: 10, 
-              marginBottom: 12, 
-              backgroundColor: COLORS.white,
-              overflow: 'hidden'
-            }}>
+            <View style={styles.pickerWrapper}>
               <Picker 
                 selectedValue={newReminderMethod} 
                 onValueChange={setNewReminderMethod} 
-                style={{ color: COLORS.deepCoffee }} 
+                style={styles.picker} 
                 enabled={!loading}
+                itemStyle={styles.pickerItem}
               >
                 <Picker.Item label="🔔 In-App Notification" value="app_notification" />
                 <Picker.Item label="📧 Email" value="email" />
               </Picker>
             </View>
 
-            <GradientButton onPress={handleAddReminder} disabled={loading}>
+            <GradientButton onPress={handleAddReminder} disabled={loading} style={styles.addReminderButton}>
               <GradientButtonBackground colors={GRADIENTS.secondaryButton}>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <MaterialCommunityIcons name="plus-circle" size={18} color={COLORS.deepCoffee} style={{ marginRight: 6 }} />
-                  <ButtonText style={{ color: COLORS.deepCoffee }}>Add Reminder</ButtonText>
-                </View>
+                <Row style={styles.buttonContent}>
+                  <MaterialCommunityIcons name="plus-circle" size={18} color={COLORS.deepCoffee} style={styles.icon} />
+                  <ButtonText style={styles.addReminderButtonText}>Add Reminder</ButtonText>
+                </Row>
               </GradientButtonBackground>
             </GradientButton>
           </View>
 
           {/* Submit Button */}
-          <GradientButton onPress={handleSubmit} disabled={loading} style={{ marginBottom: 30 }}>
+          <GradientButton onPress={handleSubmit} disabled={loading} style={styles.submitButton}>
             <GradientButtonBackground colors={isEditing ? GRADIENTS.primaryButton : GRADIENTS.goldAccent}>
               {loading ? (
                 <LoadingIndicator size="small" color="#fff" />
               ) : (
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Row style={styles.buttonContent}>
                   <MaterialCommunityIcons 
                     name={isEditing ? "content-save" : "plus-circle"} 
                     size={20} 
                     color="#fff" 
-                    style={{ marginRight: 8 }} 
+                    style={styles.icon} 
                   />
                   <ButtonText>{isEditing ? 'Update Task' : 'Create Task'}</ButtonText>
-                </View>
+                </Row>
               )}
             </GradientButtonBackground>
           </GradientButton>
+
+          {/* Date/Time Pickers */}
+          {showDueDatePicker && (
+            <DateTimePicker
+              value={dueDate || new Date()}
+              mode="date"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              onChange={handleDueDateChange}
+            />
+          )}
+
+          {showReminderDatePicker && (
+            <DateTimePicker
+              value={newReminderDate}
+              mode="date"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              onChange={handleReminderDateChange}
+              minimumDate={new Date()}
+            />
+          )}
+
+          {showReminderTimePicker && (
+            <DateTimePicker
+              value={newReminderDate}
+              mode="time"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              onChange={handleReminderTimeChange}
+            />
+          )}
         </ContentContainer>
       </ScrollContainer>
     </GradientBackground>
   );
 };
+
+const styles = StyleSheet.create({
+  scrollContent: {
+    flexGrow: 1,
+    paddingVertical: 20,
+  },
+  formTitle: {
+    fontSize: 26,
+    marginBottom: 25,
+    color: COLORS.deepCoffee,
+    fontFamily: FONTS.primary,
+    fontWeight: 'bold',
+  },
+  inputField: {
+    marginBottom: 15, // Standard margin for Input
+  },
+  textAreaField: {
+    marginBottom: 15, // Standard margin for TextArea
+  },
+  datePickerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderColor: COLORS.lightCocoa,
+    borderWidth: 1,
+    borderRadius: 12,
+    marginBottom: 15,
+    padding: 14,
+    backgroundColor: COLORS.white,
+    height: 50,
+  },
+  datePickerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  datePickerText: {
+    color: COLORS.deepCoffee,
+    flex: 1,
+    paddingVertical: 0,
+    fontFamily: FONTS.secondary,
+    fontSize: 16,
+  },
+  clearButton: {
+    padding: 4,
+  },
+  pickerRow: {
+    marginBottom: 15,
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  pickerContainer: {
+    flex: 1,
+  },
+  pickerWrapper: {
+    borderWidth: 2,
+    borderRadius: 12,
+    backgroundColor: COLORS.white,
+    overflow: 'hidden',
+    height: 55,
+    justifyContent: 'center',
+    marginBottom: 15, // Standard margin for pickers
+  },
+  picker: {
+    color: COLORS.deepCoffee,
+    height: 55,
+  },
+  pickerItem: {
+    height: 55, // For iOS picker item height
+  },
+  remindersSection: {
+    width: '100%',
+    marginTop: 20,
+    padding: 15,
+    backgroundColor: COLORS.softCream,
+    borderRadius: 12,
+    marginBottom: 20,
+  },
+  remindersHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  remindersSectionLabel: {
+    marginLeft: 8,
+    marginBottom: 0,
+    marginTop: 0,
+    fontSize: 16,
+    color: COLORS.deepCoffee,
+  },
+  icon: {
+    marginRight: 8, // Default icon margin for consistency
+  },
+  reminderItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: COLORS.white,
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 8,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+  },
+  reminderContent: {
+    flex: 1,
+  },
+  reminderTextRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+    gap: 6,
+  },
+  reminderDateText: {
+    fontWeight: 'bold',
+    fontFamily: FONTS.secondary,
+    color: COLORS.deepCoffee,
+  },
+  reminderTimeMethodText: {
+    color: COLORS.lightCocoa,
+    fontFamily: FONTS.secondary,
+    fontSize: 12,
+  },
+  removeReminderButton: {
+    padding: 4,
+  },
+  noRemindersText: {
+    color: COLORS.lightCocoa,
+    textAlign: 'center',
+    padding: 10,
+    fontFamily: FONTS.secondary,
+  },
+  addReminderLabel: {
+    marginTop: 15,
+    marginBottom: 8,
+    fontSize: 14,
+    color: COLORS.chocolateBrown,
+  },
+  newReminderDatePickerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderColor: COLORS.lightCocoa,
+    borderWidth: 1,
+    borderRadius: 10,
+    marginBottom: 10,
+    padding: 12,
+    backgroundColor: COLORS.white,
+    height: 50,
+  },
+  newReminderDatePickerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  addReminderButton: {
+    marginTop: 5,
+  },
+  addReminderButtonText: {
+    color: COLORS.deepCoffee,
+    fontSize: 16,
+  },
+  submitButton: {
+    marginBottom: 30,
+    marginTop: 20, // Add more space before the final submit button
+  },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+});
 
 export default TaskFormScreen;

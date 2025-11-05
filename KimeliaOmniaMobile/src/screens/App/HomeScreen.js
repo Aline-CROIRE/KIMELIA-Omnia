@@ -1,5 +1,6 @@
-import React, { useContext, useEffect, useState } from 'react';
-import { Alert, View, Text } from 'react-native';
+import React, { useContext, useEffect, useState, useCallback } from 'react'; // Added useCallback
+import { Alert, View, Text, StyleSheet } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native'; // Added useFocusEffect for refreshing data
 import {
   GradientBackground,
   Title,
@@ -11,75 +12,297 @@ import {
   ErrorText,
   ScrollContainer,
   ContentContainer,
+  Card,
+  CardTitle,
+  CardDescription,
+  Row,
 } from '../../components/StyledComponents';
 import { AuthContext } from '../../context/AuthContext';
 import apiClient from '../../api/apiClient';
-import { COLORS } from '../../constants';
+import { COLORS, GRADIENTS, FONTS } from '../../constants';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { isAfter, parseISO } from 'date-fns'; // Import date-fns utilities
 
 const HomeScreen = ({ navigation }) => {
   const { user, logout } = useContext(AuthContext);
   const [profileData, setProfileData] = useState(null);
-  const [loadingProfile, setLoadingProfile] = useState(true);
-  const [errorProfile, setErrorProfile] = useState('');
+  const [dashboardData, setDashboardData] = useState({
+    pendingTasks: 0,
+    upcomingEvents: 0,
+    unreadMessages: 0,
+    totalGoals: 0, // New dynamic data points
+    totalLearningResources: 0,
+    totalWellnessRecords: 0,
+  });
+  const [loadingDashboard, setLoadingDashboard] = useState(true); // Renamed from loadingProfile
+  const [errorDashboard, setErrorDashboard] = useState(''); // Renamed from errorProfile
 
-  useEffect(() => {
-    const fetchUserProfile = async () => {
-      try {
-        setLoadingProfile(true);
-        const response = await apiClient.get('/auth/profile');
-        setProfileData(response.data);
-      } catch (e) {
-        setErrorProfile(e.response?.data?.message || 'Failed to fetch profile data.');
-        Alert.alert('Error', 'Failed to load user profile. Please try again later.');
-      } finally {
-        setLoadingProfile(false);
-      }
-    };
+  const fetchDashboardData = useCallback(async () => {
+    setErrorDashboard('');
+    setLoadingDashboard(true);
+    try {
+      // 1. Fetch User Profile
+      const profileResponse = await apiClient.get('/auth/profile');
+      setProfileData(profileResponse.data);
 
-    fetchUserProfile();
-  }, [user]);
+      // 2. Fetch Tasks and calculate pending
+      const tasksResponse = await apiClient.get('/tasks');
+      const pendingTasksCount = tasksResponse.data.data.filter(task => task.status === 'pending').length;
+
+      // 3. Fetch Events and calculate upcoming
+      const eventsResponse = await apiClient.get('/events');
+      const now = new Date();
+      const upcomingEventsCount = eventsResponse.data.data.filter(event => isAfter(parseISO(event.startTime), now)).length;
+
+      // 4. Fetch Messages and calculate unread
+      const messagesResponse = await apiClient.get('/messages');
+      const unreadMessagesCount = messagesResponse.data.data.filter(message => message.status === 'unread').length;
+
+      // 5. Fetch Goals and count total
+      const goalsResponse = await apiClient.get('/goals');
+      const totalGoalsCount = goalsResponse.data.data.length;
+
+      // 6. Fetch Learning Resources and count total
+      const learningResourcesResponse = await apiClient.get('/learning-resources');
+      const totalLearningResourcesCount = learningResourcesResponse.data.data.length;
+
+      // 7. Fetch Wellness Records and count total
+      const wellnessRecordsResponse = await apiClient.get('/wellness-records');
+      const totalWellnessRecordsCount = wellnessRecordsResponse.data.data.length;
+
+      setDashboardData({
+        pendingTasks: pendingTasksCount,
+        upcomingEvents: upcomingEventsCount,
+        unreadMessages: unreadMessagesCount,
+        totalGoals: totalGoalsCount,
+        totalLearningResources: totalLearningResourcesCount,
+        totalWellnessRecords: totalWellnessRecordsCount,
+      });
+
+    } catch (e) {
+      console.error("Failed to fetch dashboard data:", e.response?.data || e.message);
+      setErrorDashboard(e.response?.data?.message || 'Failed to load dashboard data.');
+      Alert.alert('Error', 'Failed to load dashboard. Please try again later.');
+    } finally {
+      setLoadingDashboard(false);
+    }
+  }, []); // Empty dependency array means this function is created once
+
+  // Use useFocusEffect to refresh data whenever the screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      fetchDashboardData();
+      return () => {
+        // Optional cleanup if needed when screen loses focus
+      };
+    }, [fetchDashboardData])
+  );
 
   return (
     <GradientBackground>
-      <ScrollContainer contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ContentContainer>
-          <Title style={{ color: COLORS.deepCoffee }}>Welcome, {profileData?.name || user?.name || 'User'}!</Title>
-          <SubTitle style={{ color: COLORS.chocolateBrown }}>Your World, Organized Intelligently.</SubTitle>
-
-          {loadingProfile ? (
+      <ScrollContainer contentContainerStyle={styles.scrollContent}>
+        <ContentContainer style={styles.contentContainer}>
+          {loadingDashboard ? (
             <LoadingIndicator />
-          ) : errorProfile ? (
-            <ErrorText>{errorProfile}</ErrorText>
+          ) : errorDashboard ? (
+            <ErrorText>{errorDashboard}</ErrorText>
           ) : (
-            profileData && (
-              <View style={{ width: '100%', alignItems: 'center', marginTop: 20 }}>
-                <SubTitle style={{ marginTop: 20, color: COLORS.deepCoffee }}>Your Dashboard Overview</SubTitle>
-                <Text style={{ color: COLORS.deepCoffee, fontSize: 16, marginBottom: 10, textAlign: 'center' }}>
-                  (This is where your personalized insights and quick actions will appear.)
-                </Text>
-                <GradientButton>
-                  <GradientButtonBackground colors={['#7E6E5C', '#6A5B4A']}>
-                    <ButtonText>View Your Calendar</ButtonText>
+            <>
+              {/* Welcome Header */}
+              <View style={styles.headerContainer}>
+                <Title style={styles.welcomeTitle}>
+                  Hello, {profileData?.name?.split(' ')[0] || user?.name?.split(' ')[0] || 'Omnia User'}!
+                </Title>
+                <SubTitle style={styles.welcomeSubTitle}>
+                  Your World, Organized Intelligently.
+                </SubTitle>
+              </View>
+
+              {/* Quick Overview Cards */}
+              <SubTitle style={styles.sectionTitle}>Your Quick Overview</SubTitle>
+              <View style={styles.quickStatsGrid}>
+                <Card style={styles.statCard} onPress={() => navigation.navigate('PlannerTab', { screen: 'TaskList' })}>
+                  <MaterialCommunityIcons name="clipboard-list-outline" size={30} color={COLORS.chocolateBrown} />
+                  <CardTitle style={styles.statCardValue}>{dashboardData.pendingTasks}</CardTitle>
+                  <CardDescription style={styles.statCardLabel}>Pending Tasks</CardDescription>
+                </Card>
+
+                <Card style={styles.statCard} onPress={() => navigation.navigate('PlannerTab', { screen: 'EventList' })}>
+                  <MaterialCommunityIcons name="calendar-check-outline" size={30} color={COLORS.copper} />
+                  <CardTitle style={styles.statCardValue}>{dashboardData.upcomingEvents}</CardTitle>
+                  <CardDescription style={styles.statCardLabel}>Upcoming Events</CardDescription>
+                </Card>
+
+                <Card style={styles.statCard} onPress={() => navigation.navigate('CommunicatorTab', { screen: 'MessageList' })}>
+                  <MaterialCommunityIcons name="message-text-outline" size={30} color={COLORS.gold} />
+                  <CardTitle style={styles.statCardValue}>{dashboardData.unreadMessages}</CardTitle>
+                  <CardDescription style={styles.statCardLabel}>Unread Messages</CardDescription>
+                </Card>
+
+                {/* Additional dynamic cards for other modules */}
+                <Card style={styles.statCard} onPress={() => Alert.alert('Navigate to Goals', 'Goals module not yet implemented.')}>
+                  <MaterialCommunityIcons name="target-variant" size={30} color={COLORS.tan} />
+                  <CardTitle style={styles.statCardValue}>{dashboardData.totalGoals}</CardTitle>
+                  <CardDescription style={styles.statCardLabel}>Total Goals</CardDescription>
+                </Card>
+
+                <Card style={styles.statCard} onPress={() => Alert.alert('Navigate to Learning Resources', 'Learning Resources module not yet implemented.')}>
+                  <MaterialCommunityIcons name="book-open-variant" size={30} color={COLORS.chocolateBrown} />
+                  <CardTitle style={styles.statCardValue}>{dashboardData.totalLearningResources}</CardTitle>
+                  <CardDescription style={styles.statCardLabel}>Learning Resources</CardDescription>
+                </Card>
+
+                <Card style={styles.statCard} onPress={() => Alert.alert('Navigate to Wellness', 'Wellness module not yet implemented.')}>
+                  <MaterialCommunityIcons name="heart-pulse" size={30} color={COLORS.copper} />
+                  <CardTitle style={styles.statCardValue}>{dashboardData.totalWellnessRecords}</CardTitle>
+                  <CardDescription style={styles.statCardLabel}>Wellness Records</CardDescription>
+                </Card>
+              </View>
+
+              {/* Quick Action Buttons */}
+              <SubTitle style={styles.sectionTitle}>Quick Actions</SubTitle>
+              <View style={styles.quickActionsGroup}>
+                <GradientButton onPress={() => navigation.navigate('PlannerTab', { screen: 'TaskForm' })} style={styles.actionButton}>
+                  <GradientButtonBackground colors={GRADIENTS.primaryButton}>
+                    <Row style={styles.actionButtonContent}>
+                      <MaterialCommunityIcons name="plus-circle-outline" size={20} color={COLORS.white} />
+                      <ButtonText style={styles.actionButtonText}>Add New Task</ButtonText>
+                    </Row>
                   </GradientButtonBackground>
                 </GradientButton>
-                <GradientButton>
-                  <GradientButtonBackground colors={['#A9746E', '#8B5B54']}>
-                    <ButtonText>Check Recent Messages</ButtonText>
+
+                <GradientButton onPress={() => navigation.navigate('CommunicatorTab', { screen: 'MessageForm' })} style={styles.actionButton}>
+                  <GradientButtonBackground colors={GRADIENTS.goldAccent}>
+                    <Row style={styles.actionButtonContent}>
+                      <MaterialCommunityIcons name="email-edit-outline" size={20} color={COLORS.white} />
+                      <ButtonText style={styles.actionButtonText}>Draft New Message</ButtonText>
+                    </Row>
+                  </GradientButtonBackground>
+                </GradientButton>
+
+                <GradientButton onPress={() => navigation.navigate('PlannerTab', { screen: 'EventForm' })} style={styles.actionButton}>
+                  <GradientButtonBackground colors={GRADIENTS.secondaryButton}>
+                    <Row style={styles.actionButtonContent}>
+                      <MaterialCommunityIcons name="calendar-plus" size={20} color={COLORS.deepCoffee} />
+                      <ButtonText style={[styles.actionButtonText, { color: COLORS.deepCoffee }]}>Schedule New Event</ButtonText>
+                    </Row>
                   </GradientButtonBackground>
                 </GradientButton>
               </View>
-            )
-          )}
 
-          <GradientButton onPress={logout} style={{ marginTop: 30 }}>
-            <GradientButtonBackground colors={['#A0522D', '#8B4513']}>
-              <ButtonText>Logout</ButtonText>
-            </GradientButtonBackground>
-          </GradientButton>
+              {/* Main Navigation Modules (Placeholder for future ModuleCards) */}
+              {/* <SubTitle style={styles.sectionTitle}>Explore Omnia Modules</SubTitle>
+              {/* You'd typically use your ModuleCard component here, which is already good */}
+              {/* Example of how ModuleCards would fit, keeping them modular: */}
+              {/* <ModuleCard onPress={() => navigation.navigate('PlannerTab', { screen: 'PlannerHome' })}>
+                <ModuleCardBackground colors={GRADIENTS.primaryButton}>
+                  <MaterialCommunityIcons name="calendar-check" size={50} color={COLORS.white} />
+                  <ModuleCardContent>
+                    <ModuleCardTitle>Omnia Planner</ModuleCardTitle>
+                    <ModuleCardDescription>Manage your tasks and events.</ModuleCardDescription>
+                  </ModuleCardContent>
+                </ModuleCardBackground>
+              </ModuleCard> */}
+              {/* ... other ModuleCards for other tabs */}
+
+              <GradientButton onPress={logout} style={styles.logoutButton}>
+                <GradientButtonBackground colors={['#A0522D', '#8B4513']}>
+                  <ButtonText>Logout</ButtonText>
+                </GradientButtonBackground>
+              </GradientButton>
+            </>
+          )}
         </ContentContainer>
       </ScrollContainer>
     </GradientBackground>
   );
 };
+
+const styles = StyleSheet.create({
+  scrollContent: {
+    flexGrow: 1,
+    paddingVertical: 30,
+  },
+  contentContainer: {
+    paddingHorizontal: 20,
+  },
+  headerContainer: {
+    alignItems: 'center',
+    marginBottom: 40,
+  },
+  welcomeTitle: {
+    fontSize: 28,
+    fontFamily: FONTS.primary,
+    color: COLORS.deepCoffee,
+    marginBottom: 5,
+  },
+  welcomeSubTitle: {
+    fontSize: 18,
+    fontFamily: FONTS.secondary,
+    color: COLORS.chocolateBrown,
+    fontWeight: 'normal',
+  },
+  sectionTitle: {
+    alignSelf: 'flex-start',
+    marginLeft: 5,
+    marginBottom: 15,
+    marginTop: 25,
+    fontSize: 18,
+    color: COLORS.chocolateBrown,
+    fontFamily: FONTS.secondary, // Ensured font family is set
+    fontWeight: '700', // Ensured bold for section titles
+  },
+  quickStatsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginBottom: 30,
+    gap: 15, // Gap between cards
+  },
+  statCard: {
+    width: '47%', // Roughly half width minus gap
+    height: 120, // Fixed height for uniformity
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 15,
+    backgroundColor: COLORS.white,
+    borderRadius: 15,
+  },
+  statCardValue: {
+    fontSize: 24,
+    fontFamily: FONTS.primary,
+    color: COLORS.deepCoffee,
+    marginTop: 10,
+    marginBottom: 2,
+  },
+  statCardLabel: {
+    fontSize: 13,
+    fontFamily: FONTS.secondary,
+    color: COLORS.chocolateBrown,
+    textAlign: 'center',
+  },
+  quickActionsGroup: {
+    width: '100%',
+    marginBottom: 30,
+  },
+  actionButton: {
+    marginBottom: 10,
+    borderRadius: 12,
+  },
+  actionButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  actionButtonText: {
+    fontSize: 16,
+    fontFamily: FONTS.primary, // Ensure button text uses primary font
+    fontWeight: 'bold',
+  },
+  logoutButton: {
+    marginTop: 30,
+  },
+});
 
 export default HomeScreen;

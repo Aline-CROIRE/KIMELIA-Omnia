@@ -11,6 +11,8 @@ import {
   ErrorText,
   SuccessText,
   LoadingIndicator,
+  ContentContainer, // Use ContentContainer for consistent padding
+  ScrollContainer, // Add ScrollContainer for smaller screens
 } from '../../components/StyledComponents';
 import KIMELIAOmniaLogo from '../../components/Logo/KIMELIAOmniaLogo';
 import { AuthContext } from '../../context/AuthContext';
@@ -53,37 +55,42 @@ const RegisterScreen = ({ navigation }) => {
 
   return (
     <GradientBackground>
-      <KIMELIAOmniaLogo iconSize={80} textSize={28} />
-      <Title style={{ marginTop: 30, color: COLORS.deepCoffee }}>Create Account</Title>
-      {successMessage && <SuccessText>{successMessage}</SuccessText>}
-      {error && <ErrorText>{error}</ErrorText>}
-      <Input
-        placeholder="Full Name"
-        autoCapitalize="words"
-        value={name}
-        onChangeText={setName}
-      />
-      <Input
-        placeholder="Email"
-        keyboardType="email-address"
-        autoCapitalize="none"
-        value={email}
-        onChangeText={setEmail}
-      />
-      <Input
-        placeholder="Password"
-        secureTextEntry
-        value={password}
-        onChangeText={setPassword}
-      />
-      <GradientButton onPress={handleRegister} disabled={loading}>
-        <GradientButtonBackground colors={GRADIENTS.goldAccent}>
-          {loading ? <LoadingIndicator size="small" color="#fff" /> : <ButtonText>Register</ButtonText>}
-        </GradientButtonBackground>
-      </GradientButton>
-      <LinkText onPress={() => navigation.navigate('Login')}>
-        Already have an account? Login here.
-      </LinkText>
+      <ScrollContainer contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ContentContainer>
+          <KIMELIAOmniaLogo iconSize={80} textSize={28} />
+          <Title style={{ marginTop: 30, color: COLORS.deepCoffee }}>Create Account</Title>
+          {successMessage && <SuccessText>{successMessage}</SuccessText>}
+          {error && <ErrorText>{error}</ErrorText>}
+          <Input
+            placeholder="Full Name"
+            autoCapitalize="words"
+            value={name}
+            onChangeText={setName}
+          />
+          <Input
+            placeholder="Email"
+            keyboardType="email-address"
+            autoCapitalize="none"
+            value={email}
+            onChangeText={setEmail}
+          />
+          <Input
+            placeholder="Password"
+            secureTextEntry
+            value={password}
+            onChangeText={setPassword}
+            style={{ marginBottom: 20 }}
+          />
+          <GradientButton onPress={handleRegister} disabled={loading}>
+            <GradientButtonBackground colors={GRADIENTS.goldAccent}>
+              {loading ? <LoadingIndicator size="small" color="#fff" /> : <ButtonText>Register</ButtonText>}
+            </GradientButtonBackground>
+          </GradientButton>
+          <LinkText onPress={() => navigation.navigate('Login')}>
+            Already have an account? Login here.
+          </LinkText>
+        </ContentContainer>
+      </ScrollContainer>
     </GradientBackground>
   );
 };
