@@ -2,15 +2,18 @@ const Joi = require('joi');
 const { Types } = require('mongoose');
 
 // Custom Joi extension for ObjectId validation
+// RESTORED: 'base: joi.string()'
+// This is correct for validating ObjectIds that are part of a request BODY,
+// where Joi's string base validation is desired.
 const JoiObjectId = Joi.extend((joi) => ({
   type: 'objectId',
-  base: joi.string(), // Keep base: joi.string() so .hex() and .length() are available
+  base: joi.string(), // RESTORED
   messages: {
     'objectId.invalid': '{{#label}} must be a valid MongoDB ObjectId',
   },
   validate(value, helpers) {
-    // console.log(`[JoiObjectId.validate] Incoming value: '${value}', Type: ${typeof value}`); // Keep for debugging if needed
-    // This validation runs AFTER base: joi.string() has ensured 'value' is a string.
+    // This runs AFTER Joi's base string validation has confirmed 'value' is a string.
+    // console.log(`[JoiObjectId.validate] Incoming value (after base string check): '${value}', Type: ${typeof value}`); // Keep for debugging if needed
     if (!Types.ObjectId.isValid(value)) {
       return { value, errors: helpers.error('objectId.invalid') };
     }
@@ -19,18 +22,8 @@ const JoiObjectId = Joi.extend((joi) => ({
 }));
 
 // --- Common Schemas ---
-// TEMPORARY DEBUGGING APPROACH for ID validation:
-// We will create a separate, strict string validation for req.params.id
-// that runs *before* validateId. This will pinpoint if the issue is in
-// the fundamental string type or our ObjectId custom type.
-const rawIdStringSchema = Joi.string().required().messages({
-    'string.base': '{{#label}} must be a string',
-    'string.empty': '{{#label}} cannot be empty',
-    'any.required': '{{#label}} is required',
-});
-
-const idSchema = JoiObjectId.objectId().hex().length(24).required(); // Original idSchema is now correct
-
+// idSchema is still valid for use in other schemas (e.g., relatedGoal, project) within request bodies.
+const idSchema = JoiObjectId.objectId().hex().length(24).required();
 
 const dateSchema = Joi.date().iso(); // ISO 8601 date format
 
@@ -396,7 +389,8 @@ const sendGmailDraftSchema = Joi.object({
 const validate = (schema, property = 'body') => (req, res, next) => {
   console.log(`[Validation Middleware] Validating property '${property}'.`);
   if (property === 'params') {
-    console.log(`[Validation Middleware] req.params.id: '${req.params.id}', type: ${typeof req.params.id}`);
+    // Console log for params is now moved to router.param
+    // console.log(`[Validation Middleware] req.params.id: '${req.params.id}', type: ${typeof req.params.id}`);
   }
 
   // Pass context for schemas that need it (e.g., targetDate.min(Joi.ref('$now')))
@@ -420,7 +414,9 @@ const validate = (schema, property = 'body') => (req, res, next) => {
 
 module.exports = {
   // Common validation
-  validateId: validate(idSchema, 'params'),
+  // validateId is NO LONGER EXPORTED, as per your Task/Event routes
+  // No explicit validateId function exported for route parameter validation,
+  // relying on controller-level Types.ObjectId.isValid instead for :id routes.
 
   // Auth validation
   validateRegister: validate(registerSchema),

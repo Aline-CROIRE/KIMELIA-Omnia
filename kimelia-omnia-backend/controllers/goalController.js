@@ -1,5 +1,6 @@
 const asyncHandler = require('../utils/asyncHandler');
 const Goal = require('../models/Goal');
+const { Types } = require('mongoose'); // Import Mongoose Types for ObjectId validation
 
 // @desc    Get all goals for the authenticated user
 // @route   GET /api/v1/goals
@@ -30,6 +31,13 @@ const getGoals = asyncHandler(async (req, res) => {
 // @route   GET /api/v1/goals/:id
 // @access  Private
 const getGoal = asyncHandler(async (req, res) => {
+  // --- NEW: Manual validation for ID, matching Task/Event controllers ---
+  if (!Types.ObjectId.isValid(req.params.id)) {
+    res.status(400);
+    throw new Error('Invalid Goal ID format.');
+  }
+  // --- END NEW VALIDATION ---
+
   const goal = await Goal.findById(req.params.id);
 
   if (!goal) {
@@ -71,11 +79,18 @@ const createGoal = asyncHandler(async (req, res) => {
 // @route   PUT /api/v1/goals/:id
 // @access  Private
 const updateGoal = asyncHandler(async (req, res) => {
+  // --- NEW: Manual validation for ID, matching Task/Event controllers ---
+  if (!Types.ObjectId.isValid(req.params.id)) {
+    res.status(400);
+    throw new Error('Invalid Goal ID format.');
+  }
+  // --- END NEW VALIDATION ---
+
   let goal = await Goal.findById(req.params.id);
 
   if (!goal) {
     res.status(404);
-    throw new new Error('Goal not found.');
+    throw new Error('Goal not found.');
   }
 
   if (goal.user.toString() !== req.user._id.toString()) {
@@ -92,7 +107,7 @@ const updateGoal = asyncHandler(async (req, res) => {
 
     // If the new target date is in the past
     if (newTargetDate < now) {
-      // Allow if the goal is already completed or cancelled
+      // Allow if the goal is already completed or cancelled (or status is being set to completed/cancelled)
       if (req.body.status === 'completed' || req.body.status === 'cancelled' || goal.status === 'completed' || goal.status === 'cancelled') {
         // Valid, can update to past date if goal is finished
       }
@@ -118,6 +133,7 @@ const updateGoal = asyncHandler(async (req, res) => {
       req.body.progress = Math.min(100, Math.max(0, req.body.progress));
   }
 
+
   goal = await Goal.findByIdAndUpdate(req.params.id, req.body, {
     new: true,
     runValidators: true,
@@ -134,6 +150,13 @@ const updateGoal = asyncHandler(async (req, res) => {
 // @route   DELETE /api/v1/goals/:id
 // @access  Private
 const deleteGoal = asyncHandler(async (req, res) => {
+  // --- NEW: Manual validation for ID, matching Task/Event controllers ---
+  if (!Types.ObjectId.isValid(req.params.id)) {
+    res.status(400);
+    throw new Error('Invalid Goal ID format.');
+  }
+  // --- END NEW VALIDATION ---
+
   const goal = await Goal.findById(req.params.id);
 
   if (!goal) {
