@@ -15,13 +15,17 @@ const getLearningResources = asyncHandler(async (req, res) => {
   if (type) query.type = type;
   if (category) query.category = category;
   if (tag) query.tags = { $in: [tag] };
-  // --- IMPORTANT: Ensure relatedGoal is a valid ObjectId if present in query ---
-  if (relatedGoal && !Types.ObjectId.isValid(relatedGoal)) {
-      res.status(400);
-      throw new Error('Invalid relatedGoal ID format in query.');
+
+  // --- IMPORTANT: ONLY validate relatedGoal if present and if it needs to be an ObjectId ---
+  if (relatedGoal) { // Check if relatedGoal query param exists
+      if (!Types.ObjectId.isValid(relatedGoal)) { // Then validate its format
+          res.status(400);
+          throw new Error('Invalid relatedGoal ID format in query.');
+      }
+      query.relatedGoal = relatedGoal;
   }
-  if (relatedGoal) query.relatedGoal = relatedGoal;
   // --- END IMPORTANT ---
+
   if (search) {
       query.$or = [
           { title: { $regex: search, $options: 'i' } },
@@ -42,12 +46,11 @@ const getLearningResources = asyncHandler(async (req, res) => {
 // @route   GET /api/v1/learning-resources/:id
 // @access  Private
 const getLearningResource = asyncHandler(async (req, res) => {
-  // --- NEW: Manual validation for ID, matching other controllers ---
+  // Manual validation for ID, as this route explicitly takes an ID parameter
   if (!Types.ObjectId.isValid(req.params.id)) {
     res.status(400);
     throw new Error('Invalid Learning Resource ID format.');
   }
-  // --- END NEW VALIDATION ---
 
   const resource = await LearningResource.findById(req.params.id);
 
@@ -78,12 +81,11 @@ const createLearningResource = asyncHandler(async (req, res) => {
       res.status(400);
       throw new Error('Please provide at least a title, URL, and type for the learning resource.');
   }
-  // --- IMPORTANT: Validate relatedGoal if present in body ---
+  // Validate relatedGoal if present in body
   if (req.body.relatedGoal && !Types.ObjectId.isValid(req.body.relatedGoal)) {
       res.status(400);
       throw new Error('Invalid relatedGoal ID format in request body.');
   }
-  // --- END IMPORTANT ---
 
   const resource = await LearningResource.create(req.body);
 
@@ -98,12 +100,11 @@ const createLearningResource = asyncHandler(async (req, res) => {
 // @route   PUT /api/v1/learning-resources/:id
 // @access  Private
 const updateLearningResource = asyncHandler(async (req, res) => {
-  // --- NEW: Manual validation for ID, matching other controllers ---
+  // Manual validation for ID, as this route explicitly takes an ID parameter
   if (!Types.ObjectId.isValid(req.params.id)) {
     res.status(400);
     throw new Error('Invalid Learning Resource ID format.');
   }
-  // --- END NEW VALIDATION ---
 
   let resource = await LearningResource.findById(req.params.id);
 
@@ -119,12 +120,11 @@ const updateLearningResource = asyncHandler(async (req, res) => {
 
   delete req.body.user;
 
-  // --- IMPORTANT: Validate relatedGoal if present in body for update ---
+  // Validate relatedGoal if present in body for update
   if (req.body.relatedGoal && !Types.ObjectId.isValid(req.body.relatedGoal)) {
       res.status(400);
       throw new Error('Invalid relatedGoal ID format in request body.');
   }
-  // --- END IMPORTANT ---
 
   resource = await LearningResource.findByIdAndUpdate(req.params.id, req.body, {
     new: true,
@@ -142,12 +142,11 @@ const updateLearningResource = asyncHandler(async (req, res) => {
 // @route   DELETE /api/v1/learning-resources/:id
 // @access  Private
 const deleteLearningResource = asyncHandler(async (req, res) => {
-  // --- NEW: Manual validation for ID, matching other controllers ---
+  // Manual validation for ID, as this route explicitly takes an ID parameter
   if (!Types.ObjectId.isValid(req.params.id)) {
     res.status(400);
     throw new Error('Invalid Learning Resource ID format.');
   }
-  // --- END NEW VALIDATION ---
 
   const resource = await LearningResource.findById(req.params.id);
 
@@ -176,7 +175,20 @@ const deleteLearningResource = asyncHandler(async (req, res) => {
 // @route   GET /api/v1/coach/motivational-tip
 // @access  Private
 const getMotivationalTipController = asyncHandler(async (req, res) => {
-  const tip = await getMotivationalTip(req.user._id);
+  // This needs an actual implementation for getMotivationalTip in aiService.js
+  // For now, it might be undefined or throw an error if aiService is not ready.
+  // Temporarily return a hardcoded tip to ensure this route doesn't crash if AI service is not set up.
+  // const tip = await getMotivationalTip(req.user._id); // Original line
+
+  const hardcodedTips = [
+    "Believe you can and you're halfway there.",
+    "The best way to predict the future is to create it.",
+    "Your only limit is your mind.",
+    "Success is not final, failure is not fatal: it is the courage to continue that counts.",
+    "The journey of a thousand miles begins with a single step."
+  ];
+  const tip = hardcodedTips[Math.floor(Math.random() * hardcodedTips.length)];
+
 
   res.status(200).json({
     success: true,
