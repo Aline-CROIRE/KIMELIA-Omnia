@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Alert, View, Platform, Modal, TouchableOpacity, Switch } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { Alert, View, Platform, TouchableOpacity, Switch, TextInput } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { format, isBefore, isValid } from 'date-fns';
@@ -19,19 +19,20 @@ import {
   SuccessText,
   LoadingIndicator,
   Label,
-  ModalBackground,
-  ModalContent,
-  ModalButtonRow,
-  DateDisplayButton,
-  DateDisplayButtonText,
-  Row,
-  Badge,
   BadgeText,
 } from '../../../../components/StyledComponents';
 import apiClient from '../../../../api/apiClient';
 import { COLORS, GRADIENTS } from '../../../../constants';
 
-const EVENT_CATEGORIES = ['meeting', 'appointment', 'personal', 'work', 'study', 'reminder', 'other'];
+const EVENT_CATEGORIES = [
+  { value: 'meeting', label: '💼 Meeting' },
+  { value: 'appointment', label: '📅 Appointment' },
+  { value: 'personal', label: '👤 Personal' },
+  { value: 'work', label: '🏢 Work' },
+  { value: 'study', label: '📚 Study' },
+  { value: 'reminder', label: '⏰ Reminder' },
+  { value: 'other', label: '📌 Other' }
+];
 
 const EventFormScreen = ({ route, navigation }) => {
   const { eventId, eventToEdit } = route.params || {};
@@ -41,7 +42,7 @@ const EventFormScreen = ({ route, navigation }) => {
   const [description, setDescription] = useState(eventToEdit?.description || '');
   const [location, setLocation] = useState(eventToEdit?.location || '');
   const [startTime, setStartTime] = useState(eventToEdit?.startTime ? new Date(eventToEdit.startTime) : new Date());
-  const [endTime, setEndTime] = useState(eventToEdit?.endTime ? new Date(eventToEdit.endTime) : new Date());
+  const [endTime, setEndTime] = useState(eventToEdit?.endTime ? new Date(eventToEdit.endTime) : new Date(Date.now() + 3600000));
   const [allDay, setAllDay] = useState(eventToEdit?.allDay || false);
   const [category, setCategory] = useState(eventToEdit?.category || 'meeting');
   const [attendees, setAttendees] = useState(eventToEdit?.attendees ? eventToEdit.attendees.join(', ') : '');
@@ -49,15 +50,20 @@ const EventFormScreen = ({ route, navigation }) => {
   const [reminders, setReminders] = useState(
     eventToEdit?.reminders?.map(r => ({ ...r, time: new Date(r.time) })) || []
   );
-  const [newReminderTime, setNewReminderTime] = useState(new Date());
+  const [newReminderDate, setNewReminderDate] = useState(new Date());
   const [newReminderMethod, setNewReminderMethod] = useState('app_notification');
-  const [showReminderPicker, setShowReminderPicker] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
-  const [showDatePickerFor, setShowDatePickerFor] = useState(null); // 'start_date', 'start_time', 'end_date', 'end_time'
+  // Date picker states
+  const [showStartDatePicker, setShowStartDatePicker] = useState(false);
+  const [showStartTimePicker, setShowStartTimePicker] = useState(false);
+  const [showEndDatePicker, setShowEndDatePicker] = useState(false);
+  const [showEndTimePicker, setShowEndTimePicker] = useState(false);
+  const [showReminderDatePicker, setShowReminderDatePicker] = useState(false);
+  const [showReminderTimePicker, setShowReminderTimePicker] = useState(false);
 
   useEffect(() => {
     navigation.setOptions({
@@ -65,120 +71,96 @@ const EventFormScreen = ({ route, navigation }) => {
     });
   }, [isEditing, navigation]);
 
-  // --- CRITICAL FIX: Date/Time Pickers for Event Start/End ---
-  const onDateTimeChange = (event, selectedValue) => {
-    console.log("[EventForm] Event Start/End Picker - event:", event, "selectedValue:", selectedValue, "showDatePickerFor:", showDatePickerFor);
+  // Date/Time change handlers
+  const handleStartDateChange = (event, selectedDate) => {
+    setShowStartDatePicker(Platform.OS === 'ios');
+    if (selectedDate) {
+      setStartTime(selectedDate);
+      // Auto-adjust end time if it's before start time
+      if (isBefore(endTime, selectedDate)) {
+        setEndTime(new Date(selectedDate.getTime() + 3600000));
+      }
+    }
+  };
 
+  const handleStartTimeChange = (event, selectedTime) => {
+    setShowStartTimePicker(Platform.OS === 'ios');
+    if (selectedTime) {
+      setStartTime(selectedTime);
+      // Auto-adjust end time if it's before start time
+      if (isBefore(endTime, selectedTime)) {
+        setEndTime(new Date(selectedTime.getTime() + 3600000));
+      }
+    }
+  };
+
+  const handleEndDateChange = (event, selectedDate) => {
+    setShowEndDatePicker(Platform.OS === 'ios');
+    if (selectedDate) {
+      setEndTime(selectedDate);
+    }
+  };
+
+  const handleEndTimeChange = (event, selectedTime) => {
+    setShowEndTimePicker(Platform.OS === 'ios');
+    if (selectedTime) {
+      setEndTime(selectedTime);
+    }
+  };
+
+  const handleReminderDateChange = (event, selectedDate) => {
+    const currentMode = showReminderDatePicker ? 'date' : 'time';
+    
     if (Platform.OS === 'android') {
-      // In both 'set' or 'dismissed', close the picker AFTER the event is processed
-      setTimeout(() => setShowDatePickerFor(null), 0);
-    } else { // iOS handling for live updates in picker without immediate modal close
-      if (selectedValue) {
-        if (showDatePickerFor === 'start_date') {
-          const newDate = new Date(startTime);
-          newDate.setFullYear(selectedValue.getFullYear(), selectedValue.getMonth(), selectedValue.getDate());
-          setStartTime(newDate);
-          if (isBefore(newDate, endTime) && !isBefore(startTime, endTime)) {
-              const newEndTime = new Date(endTime);
-              newEndTime.setFullYear(selectedValue.getFullYear(), selectedValue.getMonth(), selectedValue.getDate());
-              setEndTime(newEndTime);
-          }
-        } else if (showDatePickerFor === 'start_time') {
-          const newTime = new Date(startTime);
-          newTime.setHours(selectedValue.getHours(), selectedValue.getMinutes());
-          setStartTime(newTime);
-        } else if (showDatePickerFor === 'end_date') {
-          const newDate = new Date(endTime);
-          newDate.setFullYear(selectedValue.getFullYear(), selectedValue.getMonth(), selectedValue.getDate());
-          setEndTime(newDate);
-          if (isBefore(newDate, startTime)) {
-              const newStartTime = new Date(startTime);
-              newStartTime.setFullYear(selectedValue.getFullYear(), selectedValue.getMonth(), selectedValue.getDate());
-              setStartTime(newStartTime);
-          }
-        } else if (showDatePickerFor === 'end_time') {
-          const newTime = new Date(endTime);
-          newTime.setHours(selectedValue.getHours(), selectedValue.getMinutes());
-          setEndTime(newTime);
-        }
-      }
+      setShowReminderDatePicker(false);
+      setShowReminderTimePicker(false);
+    } else {
+      setShowReminderDatePicker(Platform.OS === 'ios');
     }
-
-    // Only update the state if the user actually "set" a date/time
-    if (event && event.type === 'set' && selectedValue) {
-      if (showDatePickerFor === 'start_date') {
-        const newDate = new Date(startTime);
-        newDate.setFullYear(selectedValue.getFullYear(), selectedValue.getMonth(), selectedValue.getDate());
-        setStartTime(newDate);
-        if (isBefore(newDate, endTime) && !isBefore(startTime, endTime)) {
-            const newEndTime = new Date(endTime);
-            newEndTime.setFullYear(selectedValue.getFullYear(), selectedValue.getMonth(), selectedValue.getDate());
-            setEndTime(newEndTime);
-        }
-      } else if (showDatePickerFor === 'start_time') {
-        const newTime = new Date(startTime);
-        newTime.setHours(selectedValue.getHours(), selectedValue.getMinutes());
-        setStartTime(newTime);
-      } else if (showDatePickerFor === 'end_date') {
-        const newDate = new Date(endTime);
-        newDate.setFullYear(selectedValue.getFullYear(), selectedValue.getMonth(), selectedValue.getDate());
-        setEndTime(newDate);
-        if (isBefore(newDate, startTime)) {
-            const newStartTime = new Date(startTime);
-            newStartTime.setFullYear(selectedValue.getFullYear(), selectedValue.getMonth(), selectedValue.getDate());
-            setStartTime(newStartTime);
-        }
-      } else if (showDatePickerFor === 'end_time') {
-        const newTime = new Date(endTime);
-        newTime.setHours(selectedValue.getHours(), selectedValue.getMinutes());
-        setEndTime(newTime);
+    
+    if (event?.type === 'set' && selectedDate) {
+      const newDate = new Date(newReminderDate);
+      if (currentMode === 'date') {
+        newDate.setFullYear(selectedDate.getFullYear());
+        newDate.setMonth(selectedDate.getMonth());
+        newDate.setDate(selectedDate.getDate());
+      }
+      setNewReminderDate(newDate);
+      
+      // Show time picker after date on Android
+      if (Platform.OS === 'android' && currentMode === 'date') {
+        setTimeout(() => setShowReminderTimePicker(true), 300);
       }
     }
   };
 
-  const openDatePicker = (type) => {
-    setShowDatePickerFor(type);
+  const handleReminderTimeChange = (event, selectedTime) => {
+    if (Platform.OS === 'android') {
+      setShowReminderTimePicker(false);
+    } else {
+      setShowReminderTimePicker(Platform.OS === 'ios');
+    }
+    
+    if (event?.type === 'set' && selectedTime) {
+      const newDate = new Date(newReminderDate);
+      newDate.setHours(selectedTime.getHours());
+      newDate.setMinutes(selectedTime.getMinutes());
+      setNewReminderDate(newDate);
+    }
   };
 
-  const handleConfirmDateTime = () => { // For iOS modal
-    setShowDatePickerFor(null);
-  };
-
-  const handleCancelDateTime = () => { // For iOS modal
-    setShowDatePickerFor(null);
-  };
-
-  // --- CRITICAL FIX: Reminder Logic DatePicker ---
+  // Reminder management
   const handleAddReminder = () => {
-    if (!newReminderTime || !isValid(newReminderTime)) {
+    if (!newReminderDate || !isValid(newReminderDate)) {
       Alert.alert('Error', 'Please set a valid time for the reminder.');
       return;
     }
-    setReminders([...reminders, { time: newReminderTime, method: newReminderMethod }]);
-    setNewReminderTime(new Date());
-    setShowReminderPicker(false); // Ensure reminder picker is closed after adding
+    setReminders([...reminders, { time: newReminderDate, method: newReminderMethod }]);
+    setNewReminderDate(new Date());
   };
 
   const handleRemoveReminder = (index) => {
     setReminders(reminders.filter((_, i) => i !== index));
-  };
-
-  const onNewReminderDateTimeChange = (event, selectedValue) => {
-    console.log("[EventForm] Reminder Picker - event:", event, "selectedValue:", selectedValue);
-
-    if (Platform.OS === 'android') {
-      // In both 'set' or 'dismissed', close the picker AFTER the event is processed
-      setTimeout(() => setShowReminderPicker(false), 0);
-    } else { // iOS handling for live updates in picker without immediate modal close
-      if (selectedValue) {
-        setNewReminderTime(selectedValue);
-      }
-    }
-
-    // Only update the state if the user actually "set" a date/time
-    if (event && event.type === 'set' && selectedValue) {
-      setNewReminderTime(selectedValue);
-    }
   };
 
   const handleSubmit = async () => {
@@ -190,8 +172,8 @@ const EventFormScreen = ({ route, navigation }) => {
       return;
     }
     if (!isValid(startTime) || !isValid(endTime)) {
-        setError('Invalid Start or End Time. Please select valid dates and times.');
-        return;
+      setError('Invalid Start or End Time. Please select valid dates and times.');
+      return;
     }
     if (isBefore(endTime, startTime)) {
       setError('End Time cannot be before Start Time.');
@@ -227,11 +209,7 @@ const EventFormScreen = ({ route, navigation }) => {
     } catch (e) {
       console.error("Event form error:", e.response?.data || e.message);
       const backendMessage = e.response?.data?.message;
-      let displayError = 'Failed to save event. Please try again.';
-
-      if (backendMessage) {
-        displayError = backendMessage;
-      }
+      const displayError = backendMessage || 'Failed to save event. Please try again.';
       setError(displayError);
       Alert.alert('Error', displayError);
     } finally {
@@ -239,31 +217,18 @@ const EventFormScreen = ({ route, navigation }) => {
     }
   };
 
-  const pickerValue = (() => {
-    switch (showDatePickerFor) {
-      case 'start_date':
-      case 'start_time':
-        return startTime;
-      case 'end_date':
-      case 'end_time':
-        return endTime;
-      default:
-        return new Date();
-    }
-  })();
-
-  const pickerMode = (() => {
-    switch (showDatePickerFor) {
-      case 'start_date':
-      case 'end_date':
-        return 'date';
-      case 'start_time':
-      case 'end_time':
-        return 'time';
-      default:
-        return 'date';
-    }
-  })();
+  const getCategoryColor = (categoryValue) => {
+    const colors = {
+      meeting: '#3B82F6',
+      appointment: '#10B981',
+      personal: '#8B5CF6',
+      work: '#F59E0B',
+      study: '#EC4899',
+      reminder: '#EF4444',
+      other: '#6B7280'
+    };
+    return colors[categoryValue] || COLORS.deepCoffee;
+  };
 
   return (
     <GradientBackground>
@@ -276,82 +241,185 @@ const EventFormScreen = ({ route, navigation }) => {
           {successMessage ? <SuccessText>{successMessage}</SuccessText> : null}
           {error ? <ErrorText>{error}</ErrorText> : null}
 
-          <Label>Title:</Label>
+          {/* Title */}
+          <Label>Title *</Label>
           <Input
-            placeholder="Event Title"
+            placeholder="Enter event title"
             value={title}
             onChangeText={setTitle}
             editable={!loading}
           />
 
-          <Label>Description:</Label>
-          <TextArea
-            placeholder="Event Description (Optional)"
-            value={description}
-            onChangeText={setDescription}
-            editable={!loading}
-          />
-
-          <Label>Location:</Label>
-          <Input
-            placeholder="e.g., Zoom, Conference Room A"
-            value={location}
-            onChangeText={setLocation}
-            editable={!loading}
-          />
-
-          <Label>Category:</Label>
-          <View style={{ width: '100%', borderColor: COLORS.lightCocoa, borderWidth: 1, borderRadius: 8, marginBottom: 15, backgroundColor: COLORS.white }}>
+          {/* Category */}
+          <Label>Category *</Label>
+          <View style={{ 
+            borderColor: getCategoryColor(category), 
+            borderWidth: 2, 
+            borderRadius: 12, 
+            marginBottom: 15, 
+            backgroundColor: COLORS.white,
+            overflow: 'hidden'
+          }}>
             <Picker
               selectedValue={category}
-              onValueChange={(itemValue) => setCategory(itemValue)}
+              onValueChange={setCategory}
               style={{ color: COLORS.deepCoffee }}
               enabled={!loading}
             >
               {EVENT_CATEGORIES.map((cat) => (
-                <Picker.Item key={cat} label={cat.charAt(0).toUpperCase() + cat.slice(1)} value={cat} />
+                <Picker.Item key={cat.value} label={cat.label} value={cat.value} />
               ))}
             </Picker>
           </View>
 
-          <Label>Start Date:</Label>
-          <DateDisplayButton onPress={() => openDatePicker('start_date')} disabled={loading}>
-            <GradientButtonBackground colors={GRADIENTS.secondaryButton}>
-              <DateDisplayButtonText>
-                {format(startTime, 'PPP')}
-              </DateDisplayButtonText>
-            </GradientButtonBackground>
-          </DateDisplayButton>
+          {/* Start Date & Time */}
+          <View style={{ 
+            backgroundColor: COLORS.softCream, 
+            padding: 15, 
+            borderRadius: 12, 
+            marginBottom: 15 
+          }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+              <MaterialCommunityIcons name="calendar-start" size={20} color={COLORS.deepCoffee} />
+              <Label style={{ marginLeft: 8, marginBottom: 0 }}>Start Time *</Label>
+            </View>
+            
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <TouchableOpacity
+                style={{
+                  flex: 1,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  borderColor: COLORS.lightCocoa,
+                  borderWidth: 1,
+                  borderRadius: 10,
+                  padding: 12,
+                  backgroundColor: COLORS.white,
+                }}
+                onPress={() => setShowStartDatePicker(true)}
+                disabled={loading}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                  <MaterialCommunityIcons name="calendar" size={18} color={COLORS.deepCoffee} style={{ marginRight: 8 }} />
+                  <TextInput
+                    editable={false}
+                    value={format(startTime, 'MMM dd, yyyy')}
+                    style={{ color: COLORS.deepCoffee }}
+                  />
+                </View>
+              </TouchableOpacity>
 
-          <Label>Start Time:</Label>
-          <DateDisplayButton onPress={() => openDatePicker('start_time')} disabled={loading}>
-            <GradientButtonBackground colors={GRADIENTS.secondaryButton}>
-              <DateDisplayButtonText>
-                {format(startTime, 'p')}
-              </DateDisplayButtonText>
-            </GradientButtonBackground>
-          </DateDisplayButton>
+              {!allDay && (
+                <TouchableOpacity
+                  style={{
+                    flex: 1,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    borderColor: COLORS.lightCocoa,
+                    borderWidth: 1,
+                    borderRadius: 10,
+                    padding: 12,
+                    backgroundColor: COLORS.white,
+                  }}
+                  onPress={() => setShowStartTimePicker(true)}
+                  disabled={loading}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                    <MaterialCommunityIcons name="clock-outline" size={18} color={COLORS.deepCoffee} style={{ marginRight: 8 }} />
+                    <TextInput
+                      editable={false}
+                      value={format(startTime, 'h:mm a')}
+                      style={{ color: COLORS.deepCoffee }}
+                    />
+                  </View>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
 
-          <Label>End Date:</Label>
-          <DateDisplayButton onPress={() => openDatePicker('end_date')} disabled={loading}>
-            <GradientButtonBackground colors={GRADIENTS.secondaryButton}>
-              <DateDisplayButtonText>
-                {format(endTime, 'PPP')}
-              </DateDisplayButtonText>
-            </GradientButtonBackground>
-          </DateDisplayButton>
+          {/* End Date & Time */}
+          <View style={{ 
+            backgroundColor: COLORS.softCream, 
+            padding: 15, 
+            borderRadius: 12, 
+            marginBottom: 15 
+          }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+              <MaterialCommunityIcons name="calendar-end" size={20} color={COLORS.deepCoffee} />
+              <Label style={{ marginLeft: 8, marginBottom: 0 }}>End Time *</Label>
+            </View>
+            
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <TouchableOpacity
+                style={{
+                  flex: 1,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  borderColor: COLORS.lightCocoa,
+                  borderWidth: 1,
+                  borderRadius: 10,
+                  padding: 12,
+                  backgroundColor: COLORS.white,
+                }}
+                onPress={() => setShowEndDatePicker(true)}
+                disabled={loading}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                  <MaterialCommunityIcons name="calendar" size={18} color={COLORS.deepCoffee} style={{ marginRight: 8 }} />
+                  <TextInput
+                    editable={false}
+                    value={format(endTime, 'MMM dd, yyyy')}
+                    style={{ color: COLORS.deepCoffee }}
+                  />
+                </View>
+              </TouchableOpacity>
 
-          <Label>End Time:</Label>
-          <DateDisplayButton onPress={() => openDatePicker('end_time')} disabled={loading}>
-            <GradientButtonBackground colors={GRADIENTS.secondaryButton}>
-              <DateDisplayButtonText>
-                {format(endTime, 'p')}
-              </DateDisplayButtonText>
-            </GradientButtonBackground>
-          </DateDisplayButton>
+              {!allDay && (
+                <TouchableOpacity
+                  style={{
+                    flex: 1,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    borderColor: COLORS.lightCocoa,
+                    borderWidth: 1,
+                    borderRadius: 10,
+                    padding: 12,
+                    backgroundColor: COLORS.white,
+                  }}
+                  onPress={() => setShowEndTimePicker(true)}
+                  disabled={loading}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                    <MaterialCommunityIcons name="clock-outline" size={18} color={COLORS.deepCoffee} style={{ marginRight: 8 }} />
+                    <TextInput
+                      editable={false}
+                      value={format(endTime, 'h:mm a')}
+                      style={{ color: COLORS.deepCoffee }}
+                    />
+                  </View>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
 
-          <View style={{ flexDirection: 'row', alignItems: 'center', width: '100%', justifyContent: 'space-between', marginBottom: 15, marginTop: 10 }}>
-            <Label style={{ margin: 0 }}>All Day Event:</Label>
+          {/* All Day Toggle */}
+          <View style={{ 
+            flexDirection: 'row', 
+            alignItems: 'center', 
+            justifyContent: 'space-between',
+            backgroundColor: COLORS.softCream,
+            padding: 15,
+            borderRadius: 12,
+            marginBottom: 15
+          }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <MaterialCommunityIcons name="clock-time-eight" size={20} color={COLORS.deepCoffee} />
+              <Label style={{ marginLeft: 8, marginBottom: 0 }}>All Day Event</Label>
+            </View>
             <Switch
               onValueChange={setAllDay}
               value={allDay}
@@ -361,157 +429,258 @@ const EventFormScreen = ({ route, navigation }) => {
             />
           </View>
 
-          <Label>Attendees (comma-separated emails):</Label>
-          <Input
-            placeholder="e.g., user1@example.com, user2@example.com"
-            value={attendees}
-            onChangeText={setAttendees}
+          {/* Location */}
+          <Label>Location</Label>
+          <View style={{ 
+            flexDirection: 'row', 
+            alignItems: 'center',
+            borderColor: COLORS.lightCocoa,
+            borderWidth: 1,
+            borderRadius: 12,
+            marginBottom: 15,
+            backgroundColor: COLORS.white,
+            paddingHorizontal: 12
+          }}>
+            <MaterialCommunityIcons name="map-marker" size={20} color={COLORS.lightCocoa} />
+            <Input
+              placeholder="Add location (optional)"
+              value={location}
+              onChangeText={setLocation}
+              editable={!loading}
+              style={{ flex: 1, marginBottom: 0, borderWidth: 0 }}
+            />
+          </View>
+
+          {/* Description */}
+          <Label>Description</Label>
+          <TextArea
+            placeholder="Add event description (optional)"
+            value={description}
+            onChangeText={setDescription}
             editable={!loading}
-            keyboardType="email-address"
-            autoCapitalize="none"
           />
 
-          {/* --- Reminders Section --- */}
-          <View style={{ width: '100%', marginTop: 20 }}>
-            <Label>Reminders:</Label>
-            {reminders.map((reminder, index) => (
-              <Row key={index} style={{ justifyContent: 'space-between', alignItems: 'center', backgroundColor: COLORS.softCream, padding: 8, borderRadius: 8, marginBottom: 8, elevation: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.2, shadowRadius: 1.41 }}>
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', flex: 1 }}>
-                  <Badge type="info" style={{ marginRight: 10, marginBottom: 5 }}>
-                    <BadgeText>{format(reminder.time, 'MMM d, yyyy p')}</BadgeText>
-                  </Badge>
-                  <Badge type="default" style={{ marginBottom: 5 }}>
-                    <BadgeText>{reminder.method.replace('_', ' ')}</BadgeText>
-                  </Badge>
+          {/* Attendees */}
+          <Label>Attendees</Label>
+          <View style={{ 
+            flexDirection: 'row', 
+            alignItems: 'center',
+            borderColor: COLORS.lightCocoa,
+            borderWidth: 1,
+            borderRadius: 12,
+            marginBottom: 15,
+            backgroundColor: COLORS.white,
+            paddingHorizontal: 12
+          }}>
+            <MaterialCommunityIcons name="account-multiple" size={20} color={COLORS.lightCocoa} />
+            <Input
+              placeholder="email1@example.com, email2@example.com"
+              value={attendees}
+              onChangeText={setAttendees}
+              editable={!loading}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              style={{ flex: 1, marginBottom: 0, borderWidth: 0 }}
+            />
+          </View>
+
+          {/* Reminders Section */}
+          <View style={{ 
+            width: '100%', 
+            marginTop: 10,
+            padding: 15, 
+            backgroundColor: COLORS.softCream, 
+            borderRadius: 12,
+            marginBottom: 20 
+          }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+              <MaterialCommunityIcons name="bell-ring" size={20} color={COLORS.deepCoffee} />
+              <Label style={{ marginLeft: 8, marginBottom: 0 }}>Reminders</Label>
+            </View>
+            
+            {reminders.length > 0 ? (
+              reminders.map((reminder, index) => (
+                <View
+                  key={index}
+                  style={{
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    backgroundColor: COLORS.white,
+                    padding: 12,
+                    borderRadius: 10,
+                    marginBottom: 8,
+                    elevation: 2,
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.1,
+                    shadowRadius: 3,
+                  }}
+                >
+                  <View style={{ flex: 1 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+                      <MaterialCommunityIcons name="clock-outline" size={16} color={COLORS.deepCoffee} />
+                      <BadgeText style={{ marginLeft: 6, fontWeight: 'bold' }}>
+                        {format(reminder.time, 'MMM d, yyyy')}
+                      </BadgeText>
+                    </View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <BadgeText style={{ color: COLORS.lightCocoa }}>
+                        {format(reminder.time, 'h:mm a')} • {reminder.method.replace('_', ' ')}
+                      </BadgeText>
+                    </View>
+                  </View>
+                  <TouchableOpacity 
+                    onPress={() => handleRemoveReminder(index)} 
+                    disabled={loading}
+                    style={{ padding: 4 }}
+                  >
+                    <MaterialCommunityIcons name="delete" size={22} color={COLORS.errorRed} />
+                  </TouchableOpacity>
                 </View>
-                <TouchableOpacity onPress={() => handleRemoveReminder(index)} disabled={loading}>
-                  <MaterialCommunityIcons name="close-circle" size={24} color={COLORS.errorRed} />
-                </TouchableOpacity>
-              </Row>
-            ))}
+              ))
+            ) : (
+              <BadgeText style={{ color: COLORS.lightCocoa, textAlign: 'center', padding: 10 }}>
+                No reminders set
+              </BadgeText>
+            )}
 
-            <Label>Add a New Reminder:</Label>
-            <DateDisplayButton onPress={() => setShowReminderPicker(true)} disabled={loading}>
-              <GradientButtonBackground colors={GRADIENTS.secondaryButton}>
-                <DateDisplayButtonText>{format(newReminderTime, 'PPP p')}</DateDisplayButtonText>
-              </GradientButtonBackground>
-            </DateDisplayButton>
+            <Label style={{ marginTop: 15, marginBottom: 8 }}>Add New Reminder</Label>
+            
+            <TouchableOpacity
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                borderColor: COLORS.lightCocoa,
+                borderWidth: 1,
+                borderRadius: 10,
+                marginBottom: 10,
+                padding: 12,
+                backgroundColor: COLORS.white,
+              }}
+              onPress={() => setShowReminderDatePicker(true)}
+              disabled={loading}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <MaterialCommunityIcons name="calendar-clock" size={20} color={COLORS.deepCoffee} style={{ marginRight: 10 }} />
+                <View>
+                  <BadgeText style={{ fontWeight: 'bold' }}>
+                    {format(newReminderDate, 'MMM dd, yyyy')}
+                  </BadgeText>
+                  <BadgeText style={{ color: COLORS.lightCocoa }}>
+                    {format(newReminderDate, 'h:mm a')}
+                  </BadgeText>
+                </View>
+              </View>
+              <MaterialCommunityIcons name="chevron-right" size={20} color={COLORS.lightCocoa} />
+            </TouchableOpacity>
 
-            <View style={{ width: '100%', borderColor: COLORS.lightCocoa, borderWidth: 1, borderRadius: 8, marginBottom: 15, backgroundColor: COLORS.white, marginTop: 10 }}>
-              <Picker
-                selectedValue={newReminderMethod}
-                onValueChange={setNewReminderMethod}
-                style={{ color: COLORS.deepCoffee }}
+            <View style={{ 
+              borderColor: COLORS.lightCocoa, 
+              borderWidth: 1, 
+              borderRadius: 10, 
+              marginBottom: 12, 
+              backgroundColor: COLORS.white,
+              overflow: 'hidden'
+            }}>
+              <Picker 
+                selectedValue={newReminderMethod} 
+                onValueChange={setNewReminderMethod} 
+                style={{ color: COLORS.deepCoffee }} 
                 enabled={!loading}
               >
-                <Picker.Item label="In-App Notification" value="app_notification" />
-                <Picker.Item label="Email" value="email" />
+                <Picker.Item label="🔔 In-App Notification" value="app_notification" />
+                <Picker.Item label="📧 Email" value="email" />
               </Picker>
             </View>
+
             <GradientButton onPress={handleAddReminder} disabled={loading}>
               <GradientButtonBackground colors={GRADIENTS.secondaryButton}>
-                <ButtonText style={{ color: COLORS.deepCoffee }}>Add Reminder</ButtonText>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <MaterialCommunityIcons name="plus-circle" size={18} color={COLORS.deepCoffee} style={{ marginRight: 6 }} />
+                  <ButtonText style={{ color: COLORS.deepCoffee }}>Add Reminder</ButtonText>
+                </View>
               </GradientButtonBackground>
             </GradientButton>
           </View>
-          {/* End Reminders Section */}
 
-          <GradientButton onPress={handleSubmit} disabled={loading} style={{ marginTop: 20 }}>
+          {/* Submit Button */}
+          <GradientButton onPress={handleSubmit} disabled={loading} style={{ marginBottom: 30 }}>
             <GradientButtonBackground colors={isEditing ? GRADIENTS.primaryButton : GRADIENTS.goldAccent}>
-              {loading ? <LoadingIndicator size="small" color="#fff" /> : <ButtonText>{isEditing ? 'Update Event' : 'Create Event'}</ButtonText>}
+              {loading ? (
+                <LoadingIndicator size="small" color="#fff" />
+              ) : (
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <MaterialCommunityIcons 
+                    name={isEditing ? "content-save" : "calendar-plus"} 
+                    size={20} 
+                    color="#fff" 
+                    style={{ marginRight: 8 }} 
+                  />
+                  <ButtonText>{isEditing ? 'Update Event' : 'Create Event'}</ButtonText>
+                </View>
+              )}
             </GradientButtonBackground>
           </GradientButton>
 
-          {/* iOS Date/Time Picker Modal for Event Start/End */}
-          {Platform.OS === 'ios' && showDatePickerFor && (
-            <Modal
-              animationType="slide"
-              transparent={true}
-              visible={!!showDatePickerFor}
-              onRequestClose={handleCancelDateTime}
-            >
-              <ModalBackground onPress={handleCancelDateTime}>
-                <ModalContent>
-                  <DateTimePicker
-                    value={pickerValue}
-                    mode={pickerMode}
-                    display="spinner"
-                    onChange={onDateTimeChange}
-                    minimumDate={new Date()}
-                  />
-                  <ModalButtonRow>
-                    <GradientButton onPress={handleCancelDateTime} style={{ width: '48%', marginBottom: 0 }}>
-                      <GradientButtonBackground colors={['#ccc', '#bbb']}>
-                        <ButtonText>Cancel</ButtonText>
-                      </GradientButtonBackground>
-                    </GradientButton>
-                    <GradientButton onPress={handleConfirmDateTime} style={{ width: '48%', marginBottom: 0 }}>
-                      <GradientButtonBackground>
-                        <ButtonText>Confirm</ButtonText>
-                      </GradientButtonBackground>
-                    </GradientButton>
-                  </ModalButtonRow>
-                </ModalContent>
-              </ModalBackground>
-            </Modal>
-          )}
-
-          {/* Android Date/Time Picker for Event Start/End */}
-          {Platform.OS === 'android' && showDatePickerFor && (
+          {/* Date/Time Pickers */}
+          {showStartDatePicker && (
             <DateTimePicker
-              value={pickerValue}
-              mode={pickerMode}
-              display="default"
-              onChange={onDateTimeChange}
+              value={startTime}
+              mode="date"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              onChange={handleStartDateChange}
               minimumDate={new Date()}
             />
           )}
 
-          {/* iOS Reminder Date/Time Picker Modal */}
-          {Platform.OS === 'ios' && showReminderPicker && (
-            <Modal
-              animationType="slide"
-              transparent={true}
-              visible={showReminderPicker}
-              onRequestClose={() => setShowReminderPicker(false)}
-            >
-              <ModalBackground onPress={() => setShowReminderPicker(false)}>
-                <ModalContent>
-                  <DateTimePicker
-                    value={newReminderTime}
-                    mode="datetime"
-                    display="spinner"
-                    onChange={onNewReminderDateTimeChange}
-                    minimumDate={new Date()}
-                  />
-                  <ModalButtonRow>
-                    <GradientButton onPress={() => setShowReminderPicker(false)} style={{ width: '48%', marginBottom: 0 }}>
-                      <GradientButtonBackground colors={['#ccc', '#bbb']}>
-                        <ButtonText>Cancel</ButtonText>
-                      </GradientButtonBackground>
-                    </GradientButton>
-                    <GradientButton onPress={() => setShowReminderPicker(false)} style={{ width: '48%', marginBottom: 0 }}>
-                      <GradientButtonBackground>
-                        <ButtonText>Confirm</ButtonText>
-                      </GradientButtonBackground>
-                    </GradientButton>
-                  </ModalButtonRow>
-                </ModalContent>
-              </ModalBackground>
-            </Modal>
+          {showStartTimePicker && (
+            <DateTimePicker
+              value={startTime}
+              mode="time"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              onChange={handleStartTimeChange}
+            />
           )}
 
-          {/* Android Reminder Date/Time Picker */}
-          {Platform.OS === 'android' && showReminderPicker && (
+          {showEndDatePicker && (
             <DateTimePicker
-              value={newReminderTime}
-              mode="datetime"
-              display="default"
-              onChange={onNewReminderDateTimeChange}
+              value={endTime}
+              mode="date"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              onChange={handleEndDateChange}
+              minimumDate={startTime}
+            />
+          )}
+
+          {showEndTimePicker && (
+            <DateTimePicker
+              value={endTime}
+              mode="time"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              onChange={handleEndTimeChange}
+            />
+          )}
+
+          {showReminderDatePicker && (
+            <DateTimePicker
+              value={newReminderDate}
+              mode="date"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              onChange={handleReminderDateChange}
               minimumDate={new Date()}
             />
           )}
 
+          {showReminderTimePicker && (
+            <DateTimePicker
+              value={newReminderDate}
+              mode="time"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              onChange={handleReminderTimeChange}
+            />
+          )}
         </ContentContainer>
       </ScrollContainer>
     </GradientBackground>

@@ -1,14 +1,15 @@
 import React, { useState, useContext } from 'react';
+import { Alert } from 'react-native';
 import {
-  GradientBackground, // Changed from Container to GradientBackground
+  GradientBackground,
   Title,
   Input,
-  GradientButton, // Using GradientButton
+  GradientButton,
   GradientButtonBackground,
   ButtonText,
   LinkText,
   ErrorText,
-  SuccessText, // For success messages
+  SuccessText,
   LoadingIndicator,
 } from '../../components/StyledComponents';
 import KIMELIAOmniaLogo from '../../components/Logo/KIMELIAOmniaLogo';
@@ -34,29 +35,21 @@ const LoginScreen = ({ navigation }) => {
     setLoading(true);
     try {
       await login(email, password);
-      // AuthContext handles navigation to AppStack on success
     } catch (e) {
       console.error("Login error:", e.response?.data || e.message);
-      const backendMessage = e.response?.data?.message;
-      if (backendMessage === "Invalid credentials. Please check your email and password.") {
-        setError("Invalid email or password. Please try again.");
-      } else if (backendMessage === "Email is not verified. Please check your inbox for a verification email.") {
-        setError("Your email is not verified. Please check your inbox for a verification email.");
-      }
-      else {
-        setError(backendMessage || 'Login failed. Please try again.');
-      }
+      const backendMessage = e.response?.data?.message || 'Login failed. Please try again.';
+      setError(backendMessage);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <GradientBackground> {/* Apply gradient background */}
+    <GradientBackground>
       <KIMELIAOmniaLogo iconSize={80} textSize={28} />
       <Title style={{ marginTop: 30, color: COLORS.deepCoffee }}>Welcome Back!</Title>
-      {successMessage ? <SuccessText>{successMessage}</SuccessText> : null}
-      {error ? <ErrorText>{error}</ErrorText> : null}
+      {successMessage && <SuccessText>{successMessage}</SuccessText>}
+      {error && <ErrorText>{error}</ErrorText>}
       <Input
         placeholder="Email"
         keyboardType="email-address"

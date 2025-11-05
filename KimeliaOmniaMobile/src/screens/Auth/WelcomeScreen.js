@@ -14,14 +14,16 @@ const WelcomeScreen = ({ navigation }) => {
   return (
     <GradientBackground colors={GRADIENTS.background}> {/* Apply gradient background */}
       <KIMELIAOmniaLogo iconSize={100} textSize={36} /> {/* Larger logo for welcome */}
-      <Title style={{ marginTop: 40, color: COLORS.deepCoffee }}>
+      
+      <Title style={{ marginTop: 40, color: COLORS.deepCoffee, textAlign: 'center' }}>
         Your World, Organized Intelligently.
       </Title>
-      <SubTitle style={{ marginBottom: 50, color: COLORS.chocolateBrown }}>
+      
+      <SubTitle style={{ marginVertical: 20, color: COLORS.chocolateBrown, textAlign: 'center' }}>
         AI-powered productivity for life and work.
       </SubTitle>
 
-      <GradientButton onPress={() => navigation.navigate('Login')}>
+      <GradientButton onPress={() => navigation.navigate('Login')} style={{ marginBottom: 20 }}>
         <GradientButtonBackground>
           <ButtonText>Login</ButtonText>
         </GradientButtonBackground>

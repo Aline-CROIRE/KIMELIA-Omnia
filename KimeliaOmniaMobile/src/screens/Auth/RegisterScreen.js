@@ -1,15 +1,15 @@
 import React, { useState, useContext } from 'react';
 import { Alert } from 'react-native';
 import {
-  GradientBackground, // Changed from Container to GradientBackground
+  GradientBackground,
   Title,
   Input,
-  GradientButton, // Using GradientButton
+  GradientButton,
   GradientButtonBackground,
   ButtonText,
   LinkText,
   ErrorText,
-  SuccessText, // For success messages
+  SuccessText,
   LoadingIndicator,
 } from '../../components/StyledComponents';
 import KIMELIAOmniaLogo from '../../components/Logo/KIMELIAOmniaLogo';
@@ -35,36 +35,28 @@ const RegisterScreen = ({ navigation }) => {
 
     setLoading(true);
     try {
-      // Backend docs show 'role' is optional, so we'll omit it for simplicity
       await register(name, email, password);
       setSuccessMessage('Registration successful! Please verify your email to log in.');
       Alert.alert(
         'Registration Successful',
         'Your account has been created. A verification email has been sent. Please verify your email to log in.'
       );
-      navigation.navigate('Login'); // Navigate to Login screen after successful registration
+      navigation.navigate('Login');
     } catch (e) {
       console.error("Registration error:", e.response?.data || e.message);
-      const backendMessage = e.response?.data?.message;
-      if (backendMessage && backendMessage.includes("User already exists with this email")) {
-        setError("An account with this email already exists. Please login or use a different email.");
-      } else if (backendMessage === "Please enter all required fields") {
-        setError("All fields are required. Please fill them out.");
-      }
-      else {
-        setError(backendMessage || 'Registration failed. Please try again.');
-      }
+      const backendMessage = e.response?.data?.message || 'Registration failed. Please try again.';
+      setError(backendMessage);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <GradientBackground> {/* Apply gradient background */}
+    <GradientBackground>
       <KIMELIAOmniaLogo iconSize={80} textSize={28} />
       <Title style={{ marginTop: 30, color: COLORS.deepCoffee }}>Create Account</Title>
-      {successMessage ? <SuccessText>{successMessage}</SuccessText> : null}
-      {error ? <ErrorText>{error}</ErrorText> : null}
+      {successMessage && <SuccessText>{successMessage}</SuccessText>}
+      {error && <ErrorText>{error}</ErrorText>}
       <Input
         placeholder="Full Name"
         autoCapitalize="words"
@@ -85,7 +77,7 @@ const RegisterScreen = ({ navigation }) => {
         onChangeText={setPassword}
       />
       <GradientButton onPress={handleRegister} disabled={loading}>
-        <GradientButtonBackground colors={GRADIENTS.goldAccent}> {/* Using a different gradient for register button */}
+        <GradientButtonBackground colors={GRADIENTS.goldAccent}>
           {loading ? <LoadingIndicator size="small" color="#fff" /> : <ButtonText>Register</ButtonText>}
         </GradientButtonBackground>
       </GradientButton>

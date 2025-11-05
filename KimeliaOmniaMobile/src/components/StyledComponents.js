@@ -2,6 +2,7 @@ import styled from 'styled-components/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS, FONTS, GRADIENTS } from '../constants';
 
+// General Container for screens
 export const Container = styled.View`
   flex: 1;
   background-color: ${COLORS.softCream};
@@ -10,6 +11,7 @@ export const Container = styled.View`
   padding: 20px;
 `;
 
+// Gradient background for screens
 export const GradientBackground = styled(LinearGradient).attrs({
   colors: GRADIENTS.background,
   start: { x: 0, y: 0 },
@@ -18,12 +20,14 @@ export const GradientBackground = styled(LinearGradient).attrs({
   flex: 1;
 `;
 
+// Scrollable container
 export const ScrollContainer = styled.ScrollView`
   flex: 1;
   background-color: transparent; /* Make it transparent to show GradientBackground */
   padding: 20px;
 `;
 
+// Content container for layout
 export const ContentContainer = styled.View`
   flex: 1;
   padding: 20px;
@@ -31,7 +35,7 @@ export const ContentContainer = styled.View`
   align-items: center;
 `;
 
-
+// Title styling
 export const Title = styled.Text`
   font-size: 28px;
   font-weight: bold;
@@ -41,6 +45,7 @@ export const Title = styled.Text`
   text-align: center;
 `;
 
+// Subtitle styling
 export const SubTitle = styled.Text`
   font-size: 20px;
   font-weight: 600;
@@ -50,6 +55,7 @@ export const SubTitle = styled.Text`
   text-align: center;
 `;
 
+// Input field styling
 export const Input = styled.TextInput.attrs({
   placeholderTextColor: COLORS.tan,
 })`
@@ -65,6 +71,7 @@ export const Input = styled.TextInput.attrs({
   font-family: ${FONTS.secondary};
 `;
 
+// TextArea styling
 export const TextArea = styled.TextInput.attrs({
   placeholderTextColor: COLORS.tan,
   multiline: true,
@@ -82,6 +89,7 @@ export const TextArea = styled.TextInput.attrs({
   font-family: ${FONTS.secondary};
 `;
 
+// Button styling
 export const Button = styled.TouchableOpacity`
   width: 100%;
   background-color: ${props => props.primary ? COLORS.chocolateBrown : COLORS.copper};
@@ -89,8 +97,10 @@ export const Button = styled.TouchableOpacity`
   border-radius: 8px;
   align-items: center;
   margin-bottom: 10px;
+  elevation: 3; /* Add elevation for better visibility */
 `;
 
+// Gradient button styling
 export const GradientButton = styled.TouchableOpacity`
   width: 100%;
   border-radius: 8px;
@@ -99,6 +109,7 @@ export const GradientButton = styled.TouchableOpacity`
   ${props => props.disabled && `opacity: 0.6;`}
 `;
 
+// Gradient background for buttons
 export const GradientButtonBackground = styled(LinearGradient).attrs(props => ({
   colors: props.colors || GRADIENTS.primaryButton,
   start: { x: 0, y: 0 },
@@ -109,6 +120,7 @@ export const GradientButtonBackground = styled(LinearGradient).attrs(props => ({
   justify-content: center;
 `;
 
+// Button text styling
 export const ButtonText = styled.Text`
   color: ${COLORS.white};
   font-size: 18px;
@@ -116,14 +128,17 @@ export const ButtonText = styled.Text`
   font-family: ${FONTS.primary};
 `;
 
+// Link text styling
 export const LinkText = styled.Text`
   color: ${COLORS.chocolateBrown};
   font-size: 16px;
   font-family: ${FONTS.secondary};
   margin-top: 10px;
   text-decoration-line: underline;
+  text-align: center; /* Centered for better UX */
 `;
 
+// Error text styling
 export const ErrorText = styled.Text`
   color: ${COLORS.errorRed};
   font-size: 14px;
@@ -131,6 +146,7 @@ export const ErrorText = styled.Text`
   text-align: center;
 `;
 
+// Success text styling
 export const SuccessText = styled.Text`
   color: ${COLORS.successGreen};
   font-size: 14px;
@@ -138,6 +154,7 @@ export const SuccessText = styled.Text`
   text-align: center;
 `;
 
+// Loading indicator styling
 export const LoadingIndicator = styled.ActivityIndicator.attrs({
   color: COLORS.chocolateBrown,
   size: 'large',
@@ -145,6 +162,7 @@ export const LoadingIndicator = styled.ActivityIndicator.attrs({
   margin-top: 20px;
 `;
 
+// Card styling
 export const Card = styled.TouchableOpacity`
   background-color: ${COLORS.white};
   border-radius: 12px;
@@ -156,6 +174,7 @@ export const Card = styled.TouchableOpacity`
   border: 1px solid ${COLORS.lightCocoa};
 `;
 
+// Card title styling
 export const CardTitle = styled.Text`
   font-size: 18px;
   font-weight: bold;
@@ -164,6 +183,7 @@ export const CardTitle = styled.Text`
   font-family: ${FONTS.primary};
 `;
 
+// Card description styling
 export const CardDescription = styled.Text`
   font-size: 14px;
   color: ${COLORS.deepCoffee};
@@ -171,6 +191,7 @@ export const CardDescription = styled.Text`
   font-family: ${FONTS.secondary};
 `;
 
+// Detail text styling
 export const DetailText = styled.Text`
   font-size: 15px;
   color: ${COLORS.deepCoffee};
@@ -178,6 +199,7 @@ export const DetailText = styled.Text`
   font-family: ${FONTS.secondary};
 `;
 
+// Label styling
 export const Label = styled.Text`
   font-size: 14px;
   font-weight: 600;
@@ -187,6 +209,7 @@ export const Label = styled.Text`
   align-self: flex-start;
 `;
 
+// Badge styling
 export const Badge = styled.View`
   background-color: ${props => {
     switch (props.type) {
@@ -202,7 +225,7 @@ export const Badge = styled.View`
       case 'completed':
         return COLORS.successGreen;
       case 'info':
-      case 'default': // Added default for general badges
+      case 'default':
         return COLORS.chocolateBrown;
       default:
         return COLORS.lightCocoa;
@@ -214,12 +237,14 @@ export const Badge = styled.View`
   margin-bottom: 5px;
 `;
 
+// Badge text styling
 export const BadgeText = styled.Text`
   color: ${COLORS.white};
   font-size: 12px;
   font-weight: bold;
 `;
 
+// Row styling
 export const Row = styled.View`
   flex-direction: row;
   flex-wrap: wrap;
@@ -228,12 +253,14 @@ export const Row = styled.View`
   width: 100%;
 `;
 
+// Section styling
 export const Section = styled.View`
   width: 100%;
   margin-bottom: 20px;
   align-items: flex-start; /* Default for sections */
 `;
 
+// Floating action button styling
 export const FloatingActionButton = styled.TouchableOpacity`
   position: absolute;
   width: 60px;
@@ -248,18 +275,21 @@ export const FloatingActionButton = styled.TouchableOpacity`
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 `;
 
+// FAB text styling
 export const FabText = styled.Text`
   font-size: 30px;
   color: ${COLORS.white};
   line-height: 32px;
 `;
 
+// Modal background styling
 export const ModalBackground = styled.Pressable`
   flex: 1;
   background-color: rgba(0, 0, 0, 0.5);
   justify-content: flex-end;
 `;
 
+// Modal content styling
 export const ModalContent = styled.View`
   background-color: ${COLORS.white};
   border-top-left-radius: 20px;
@@ -269,6 +299,7 @@ export const ModalContent = styled.View`
   align-items: center;
 `;
 
+// Modal button row styling
 export const ModalButtonRow = styled.View`
   flex-direction: row;
   justify-content: space-around;
@@ -276,6 +307,7 @@ export const ModalButtonRow = styled.View`
   margin-top: 15px;
 `;
 
+// Date display button styling
 export const DateDisplayButton = styled(GradientButton).attrs({
   colors: GRADIENTS.secondaryButton,
 })`
@@ -283,14 +315,14 @@ export const DateDisplayButton = styled(GradientButton).attrs({
   padding: 0;
 `;
 
+// Date display button text styling
 export const DateDisplayButtonText = styled.Text`
   color: ${COLORS.deepCoffee};
   font-size: 16px;
   font-family: ${FONTS.secondary};
 `;
 
-
-// --- New Components for Module Dashboards ---
+// New components for module dashboards
 
 export const ModuleCard = styled.TouchableOpacity`
   width: 100%;
