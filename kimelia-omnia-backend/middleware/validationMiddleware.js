@@ -2,23 +2,16 @@ const Joi = require('joi');
 const { Types } = require('mongoose');
 
 // Custom Joi extension for ObjectId validation
-// TEMPORARY BYPASS: We're removing 'base: joi.string()' here
-// so JoiObjectId directly uses our custom validation, allowing us
-// to see if the issue is with Joi's internal string coercion/validation
-// before our custom 'validate' method even gets called.
 const JoiObjectId = Joi.extend((joi) => ({
   type: 'objectId',
-  // Removed 'base: joi.string()' TEMPORARILY.
-  // This means Joi will not perform its default string validation first.
-  // It will directly call our 'validate' method with whatever 'value' it receives.
+  base: joi.string(), // Keep base: joi.string() so .hex() and .length() are available
   messages: {
     'objectId.invalid': '{{#label}} must be a valid MongoDB ObjectId',
   },
   validate(value, helpers) {
-    console.log(`[JoiObjectId.validate - TEMPORARY BYPASS] Incoming value: '${value}', Type: ${typeof value}`); // CRITICAL DEBUG LOG
-    // If the value is not a string, or is an empty string, the following might still fail.
-    // We expect it to be a string at this point from Express.
-    if (typeof value !== 'string' || value.trim() === '' || !Types.ObjectId.isValid(value)) {
+    // console.log(`[JoiObjectId.validate] Incoming value: '${value}', Type: ${typeof value}`); // Keep for debugging if needed
+    // This validation runs AFTER base: joi.string() has ensured 'value' is a string.
+    if (!Types.ObjectId.isValid(value)) {
       return { value, errors: helpers.error('objectId.invalid') };
     }
     return value;
@@ -26,9 +19,18 @@ const JoiObjectId = Joi.extend((joi) => ({
 }));
 
 // --- Common Schemas ---
-// idSchema now relies purely on our custom JoiObjectId type,
-// which TEMPORARILY does not inherit from joi.string()
-const idSchema = JoiObjectId.objectId().hex().length(24).required(); // Keep hex/length for format check if it passes initial type check
+// TEMPORARY DEBUGGING APPROACH for ID validation:
+// We will create a separate, strict string validation for req.params.id
+// that runs *before* validateId. This will pinpoint if the issue is in
+// the fundamental string type or our ObjectId custom type.
+const rawIdStringSchema = Joi.string().required().messages({
+    'string.base': '{{#label}} must be a string',
+    'string.empty': '{{#label}} cannot be empty',
+    'any.required': '{{#label}} is required',
+});
+
+const idSchema = JoiObjectId.objectId().hex().length(24).required(); // Original idSchema is now correct
+
 
 const dateSchema = Joi.date().iso(); // ISO 8601 date format
 
