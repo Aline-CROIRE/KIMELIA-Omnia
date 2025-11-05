@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
-import { Alert, View, StyleSheet } from 'react-native';
+import { Alert, View, StyleSheet, Text } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import {
   GradientBackground,
@@ -81,8 +80,8 @@ const MessageDetailScreen = ({ route, navigation }) => {
       [
         {
           text: "Cancel",
-          style: "cancel"
-        },
+          style: "cancel",
+        }, // Added/ensured trailing comma
         {
           text: "Delete",
           onPress: async () => {
@@ -99,8 +98,8 @@ const MessageDetailScreen = ({ route, navigation }) => {
               setLoading(false);
             }
           },
-          style: "destructive"
-        }
+          style: "destructive",
+        }, // Added/ensured trailing comma
       ]
     );
   };

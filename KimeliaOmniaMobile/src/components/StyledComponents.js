@@ -212,12 +212,13 @@ export const Label = styled.Text`
   font-family: ${FONTS.secondary}; /* Lato_400Regular or Lato_700Bold based on weight */
 `;
 
-// Badge styling
+// Badge styling - Added 'overdue' type
 export const Badge = styled.View`
   background-color: ${props => {
     switch (props.type) {
       case 'high':
       case 'urgent':
+      case 'overdue': // --- ADDED 'overdue' ---
         return COLORS.errorRed;
       case 'medium':
       case 'in-progress':
@@ -227,11 +228,15 @@ export const Badge = styled.View`
         return COLORS.tan;
       case 'completed':
         return COLORS.successGreen;
-      case 'info':
-      case 'default':
+      case 'info': // Often used for general status or default tags
+      case 'default': // General default for other categories/tags
         return COLORS.chocolateBrown;
+      case 'active': // Specific for goal status 'active'
+        return '#10B981'; // Green for active
+      case 'on_hold': // Specific for goal status 'on_hold'
+        return '#F59E0B'; // Orange for on_hold
       default:
-        return COLORS.lightCocoa;
+        return COLORS.lightCocoa; // Fallback
     }
   }};
   border-radius: 15px;

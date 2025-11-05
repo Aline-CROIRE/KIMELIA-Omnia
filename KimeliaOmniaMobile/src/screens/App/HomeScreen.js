@@ -1,6 +1,6 @@
-import React, { useContext, useEffect, useState, useCallback } from 'react'; // Added useCallback
-import { Alert, View, Text, StyleSheet } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native'; // Added useFocusEffect for refreshing data
+import React, { useContext, useEffect, useState, useCallback } from 'react';
+import { Alert, View, Text, StyleSheet } from 'react-native'; // Import Text
+import { useFocusEffect } from '@react-navigation/native';
 import {
   GradientBackground,
   Title,
@@ -21,7 +21,7 @@ import { AuthContext } from '../../context/AuthContext';
 import apiClient from '../../api/apiClient';
 import { COLORS, GRADIENTS, FONTS } from '../../constants';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import { isAfter, parseISO } from 'date-fns'; // Import date-fns utilities
+import { isAfter, parseISO } from 'date-fns';
 
 const HomeScreen = ({ navigation }) => {
   const { user, logout } = useContext(AuthContext);
@@ -30,12 +30,12 @@ const HomeScreen = ({ navigation }) => {
     pendingTasks: 0,
     upcomingEvents: 0,
     unreadMessages: 0,
-    totalGoals: 0, // New dynamic data points
+    totalGoals: 0,
     totalLearningResources: 0,
     totalWellnessRecords: 0,
   });
-  const [loadingDashboard, setLoadingDashboard] = useState(true); // Renamed from loadingProfile
-  const [errorDashboard, setErrorDashboard] = useState(''); // Renamed from errorProfile
+  const [loadingDashboard, setLoadingDashboard] = useState(true);
+  const [errorDashboard, setErrorDashboard] = useState('');
 
   const fetchDashboardData = useCallback(async () => {
     setErrorDashboard('');
@@ -86,9 +86,8 @@ const HomeScreen = ({ navigation }) => {
     } finally {
       setLoadingDashboard(false);
     }
-  }, []); // Empty dependency array means this function is created once
+  }, []);
 
-  // Use useFocusEffect to refresh data whenever the screen comes into focus
   useFocusEffect(
     useCallback(() => {
       fetchDashboardData();
@@ -111,10 +110,11 @@ const HomeScreen = ({ navigation }) => {
               {/* Welcome Header */}
               <View style={styles.headerContainer}>
                 <Title style={styles.welcomeTitle}>
-                  Hello, {profileData?.name?.split(' ')[0] || user?.name?.split(' ')[0] || 'Omnia User'}!
+                  <Text>Hello, </Text>{/* Wrapped static text */}
+                  {profileData?.name?.split(' ')[0] || user?.name?.split(' ')[0] || 'Omnia User'}!
                 </Title>
                 <SubTitle style={styles.welcomeSubTitle}>
-                  Your World, Organized Intelligently.
+                  <Text>Your World, Organized Intelligently.</Text> {/* Wrapped static text */}
                 </SubTitle>
               </View>
 
@@ -139,8 +139,7 @@ const HomeScreen = ({ navigation }) => {
                   <CardDescription style={styles.statCardLabel}>Unread Messages</CardDescription>
                 </Card>
 
-                {/* Additional dynamic cards for other modules */}
-                <Card style={styles.statCard} onPress={() => Alert.alert('Navigate to Goals', 'Goals module not yet implemented.')}>
+                <Card style={styles.statCard} onPress={() => navigation.navigate('CoachTab', { screen: 'GoalList' })}>
                   <MaterialCommunityIcons name="target-variant" size={30} color={COLORS.tan} />
                   <CardTitle style={styles.statCardValue}>{dashboardData.totalGoals}</CardTitle>
                   <CardDescription style={styles.statCardLabel}>Total Goals</CardDescription>
@@ -188,22 +187,16 @@ const HomeScreen = ({ navigation }) => {
                     </Row>
                   </GradientButtonBackground>
                 </GradientButton>
-              </View>
 
-              {/* Main Navigation Modules (Placeholder for future ModuleCards) */}
-              {/* <SubTitle style={styles.sectionTitle}>Explore Omnia Modules</SubTitle>
-              {/* You'd typically use your ModuleCard component here, which is already good */}
-              {/* Example of how ModuleCards would fit, keeping them modular: */}
-              {/* <ModuleCard onPress={() => navigation.navigate('PlannerTab', { screen: 'PlannerHome' })}>
-                <ModuleCardBackground colors={GRADIENTS.primaryButton}>
-                  <MaterialCommunityIcons name="calendar-check" size={50} color={COLORS.white} />
-                  <ModuleCardContent>
-                    <ModuleCardTitle>Omnia Planner</ModuleCardTitle>
-                    <ModuleCardDescription>Manage your tasks and events.</ModuleCardDescription>
-                  </ModuleCardContent>
-                </ModuleCardBackground>
-              </ModuleCard> */}
-              {/* ... other ModuleCards for other tabs */}
+                <GradientButton onPress={() => navigation.navigate('CoachTab', { screen: 'GoalForm' })} style={styles.actionButton}>
+                  <GradientButtonBackground colors={['#9c5c36', '#c89d7d']}>
+                    <Row style={styles.actionButtonContent}>
+                      <MaterialCommunityIcons name="target-variant" size={20} color={COLORS.white} />
+                      <ButtonText style={styles.actionButtonText}>Set New Goal</ButtonText>
+                    </Row>
+                  </GradientButtonBackground>
+                </GradientButton>
+              </View>
 
               <GradientButton onPress={logout} style={styles.logoutButton}>
                 <GradientButtonBackground colors={['#A0522D', '#8B4513']}>
@@ -249,19 +242,19 @@ const styles = StyleSheet.create({
     marginTop: 25,
     fontSize: 18,
     color: COLORS.chocolateBrown,
-    fontFamily: FONTS.secondary, // Ensured font family is set
-    fontWeight: '700', // Ensured bold for section titles
+    fontFamily: FONTS.secondary,
+    fontWeight: '700',
   },
   quickStatsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
     marginBottom: 30,
-    gap: 15, // Gap between cards
+    gap: 15,
   },
   statCard: {
-    width: '47%', // Roughly half width minus gap
-    height: 120, // Fixed height for uniformity
+    width: '47%',
+    height: 120,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 15,
@@ -297,7 +290,7 @@ const styles = StyleSheet.create({
   },
   actionButtonText: {
     fontSize: 16,
-    fontFamily: FONTS.primary, // Ensure button text uses primary font
+    fontFamily: FONTS.primary,
     fontWeight: 'bold',
   },
   logoutButton: {

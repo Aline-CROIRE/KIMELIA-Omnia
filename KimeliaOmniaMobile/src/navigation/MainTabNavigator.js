@@ -6,9 +6,10 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 // Import the module stacks/screens
 import HomeScreen from '../screens/App/HomeScreen';
 import PlannerStackScreen from './PlannerStack';
-import CommunicatorStackScreen from './CommunicatorStack'; // Import the new CommunicatorStack
+import CommunicatorStackScreen from './CommunicatorStack';
+import CoachStackScreen from './CoachStack'; // --- NEW IMPORT ---
 
-import { COLORS } from '../constants';
+import { COLORS, FONTS } from '../constants'; // Import FONTS for label style
 
 const Tab = createBottomTabNavigator();
 
@@ -18,7 +19,8 @@ const getTabBarVisibility = (route) => {
   // Hide tab bar for specific detail/form screens *within their respective stacks*
   const hideOnScreens = [
     'TaskForm', 'TaskDetail', 'EventForm', 'EventDetail',
-    'MessageForm', 'MessageDetail' // Add Communicator detail/form screens
+    'MessageForm', 'MessageDetail',
+    'GoalForm', 'GoalDetail', // --- NEW: Add Goal detail/form screens ---
   ];
   if (hideOnScreens.includes(routeName)) {
     return 'none'; // This hides the tab bar
@@ -43,7 +45,7 @@ const MainTabNavigator = () => {
         },
         tabBarLabelStyle: {
           fontSize: 12,
-          fontFamily: COLORS.secondary,
+          fontFamily: FONTS.secondary, // Use secondary font for tab labels
         },
       })}
     >
@@ -59,7 +61,7 @@ const MainTabNavigator = () => {
       />
       <Tab.Screen
         name="PlannerTab"
-        component={PlannerStackScreen} // Renders the PlannerStackNavigator
+        component={PlannerStackScreen}
         options={({ route }) => ({
           title: 'Planner',
           tabBarIcon: ({ color, size }) => (
@@ -70,24 +72,25 @@ const MainTabNavigator = () => {
       />
       <Tab.Screen
         name="CommunicatorTab"
-        component={CommunicatorStackScreen} // Now renders the CommunicatorStackNavigator
+        component={CommunicatorStackScreen}
         options={({ route }) => ({
           title: 'Communicator',
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="message-text-outline" color={color} size={size} />
           ),
-          tabBarStyle: { display: getTabBarVisibility(route) }, // Apply dynamic visibility
+          tabBarStyle: { display: getTabBarVisibility(route) },
         })}
       />
       <Tab.Screen
-        name="CoachTab"
-        component={HomeScreen} // Placeholder for Coach module's stack
-        options={{
+        name="CoachTab" // --- NEW TAB SCREEN ---
+        component={CoachStackScreen} // Renders the CoachStackNavigator
+        options={({ route }) => ({
           title: 'Coach',
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="run" color={color} size={size} />
           ),
-        }}
+          tabBarStyle: { display: getTabBarVisibility(route) }, // Apply dynamic visibility
+        })}
       />
       <Tab.Screen
         name="WorkspaceTab"
