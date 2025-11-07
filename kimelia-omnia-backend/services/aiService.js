@@ -1,7 +1,7 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 // Initialize Google Generative AI client with API key from environment variables
-let gemini;
+let gemini; // Renaming for clarity as we'll use PaLM 2 via GenerativeAI client
 if (process.env.GEMINI_API_KEY) {
   gemini = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 } else {
@@ -32,25 +32,23 @@ const summarizeText = async (text, promptPrefix = 'Summarize the following text 
   }
 
   try {
-    const model = gemini.getGenerativeModel({ model: "gemini-pro" }); // Use "gemini-pro" for text tasks
-    const chat = model.startChat({
-      history: [
-        { role: "user", parts: [{ text: "You are a helpful assistant that excels at summarizing text concisely and accurately." }] },
-      ],
-      generationConfig: {
-        maxOutputTokens: 150, // Max length of the summary
-        temperature: 0.5,     // Less creative, more factual
-      },
+    const model = gemini.getGenerativeModel({ model: "text-bison-001" }); // --- SWITCHED TO text-bison-001 ---
+
+    const fullPrompt = `${promptPrefix}\n\nText to summarize:\n${text}`;
+
+    const result = await model.generateText({ // --- USING generateText ---
+      prompt: { text: fullPrompt },
+      temperature: 0.5,
+      maxOutputTokens: 150,
     });
 
-    const result = await chat.sendMessage(`${promptPrefix}\n\nText to summarize:\n${text}`);
     const response = result.response;
-    return response.text().trim();
+    return response.text.trim(); // Access .text directly
 
   } catch (error) {
-    console.error('Error summarizing text with Gemini:', error.message);
+    console.error('Error summarizing text with Gemini (text-bison-001):', error.message);
     if (error.response) {
-      console.error('Gemini API Error details:', error.response.data || error.response.statusText);
+      console.error('Gemini API Error details:', error);
     }
     throw new Error('Failed to summarize text using AI. Please check server logs and your Gemini API key/usage limits.');
   }
@@ -81,25 +79,21 @@ const draftMessage = async (instruction, context = '', tone = 'professional', fo
   userPrompt += ` Ensure the draft is in a ${tone} tone and formatted as a ${format}.`;
 
   try {
-    const model = gemini.getGenerativeModel({ model: "gemini-pro" });
-    const chat = model.startChat({
-      history: [
-        { role: "user", parts: [{ text: "You are a helpful assistant that drafts clear, concise, and appropriate messages." }] },
-      ],
-      generationConfig: {
-        maxOutputTokens: 300, // Max length of the draft
-        temperature: 0.7,     // More creative for drafting
-      },
+    const model = gemini.getGenerativeModel({ model: "text-bison-001" }); // --- SWITCHED TO text-bison-001 ---
+
+    const result = await model.generateText({ // --- USING generateText ---
+      prompt: { text: userPrompt },
+      temperature: 0.7,
+      maxOutputTokens: 300,
     });
 
-    const result = await chat.sendMessage(userPrompt);
     const response = result.response;
-    return response.text().trim();
+    return response.text.trim(); // Access .text directly
 
   } catch (error) {
-    console.error('Error drafting message with Gemini:', error.message);
+    console.error('Error drafting message with Gemini (text-bison-001):', error.message);
     if (error.response) {
-      console.error('Gemini API Error details:', error.response.data || error.response.statusText);
+      console.error('Gemini API Error details:', error);
     }
     throw new Error('Failed to draft message using AI. Please check server logs and your Gemini API key/usage limits.');
   }
@@ -135,39 +129,34 @@ const getMotivationalTip = async (userContext = {}) => {
     return staticMotivationalTips[randomIndex];
   }
 
-  let prompt;
+  let promptContent;
   if (Object.keys(userContext).length > 0) {
-    prompt = `Given the following user context, provide a single, inspiring, and actionable motivational tip (max 2 sentences) that encourages growth and perseverance. Be empathetic and positive.
+    promptContent = `Given the following user context, provide a single, inspiring, and actionable motivational tip (max 2 sentences) that encourages growth and perseverance. Be empathetic and positive.
 
 User Context:
 ${JSON.stringify(userContext, null, 2)}
 
 Motivational Tip:`;
   } else {
-    // If no context, use a general AI prompt
-    prompt = `Provide a single, inspiring, and actionable motivational tip (max 2 sentences) about productivity or personal growth.`;
+    promptContent = `Provide a single, inspiring, and actionable motivational tip (max 2 sentences) about productivity or personal growth.`;
   }
 
   try {
-    const model = gemini.getGenerativeModel({ model: "gemini-pro" });
-    const chat = model.startChat({
-      history: [
-        { role: "user", parts: [{ text: "You are an encouraging and wise AI coach, providing concise and impactful motivational tips." }] },
-      ],
-      generationConfig: {
-        maxOutputTokens: 80, // Keep tips very concise
-        temperature: 0.9,    // More creative for motivational tips
-      },
+    const model = gemini.getGenerativeModel({ model: "text-bison-001" }); // --- SWITCHED TO text-bison-001 ---
+
+    const result = await model.generateText({ // --- USING generateText ---
+      prompt: { text: promptContent },
+      temperature: 0.9,
+      maxOutputTokens: 80,
     });
 
-    const result = await chat.sendMessage(prompt);
     const response = result.response;
-    return response.text().trim();
+    return response.text.trim(); // Access .text directly
 
   } catch (error) {
-    console.error('Error getting AI motivational tip with Gemini:', error.message);
+    console.error('Error getting AI motivational tip with Gemini (text-bison-001):', error.message);
     if (error.response) {
-      console.error('Gemini API Error details:', error.response.data || error.response.statusText);
+      console.error('Gemini API Error details:', error);
     }
     // Fallback to static tips on AI failure
     const randomIndex = Math.floor(Math.random() * staticMotivationalTips.length);
@@ -193,7 +182,7 @@ const getPersonalizedProductivityRecommendation = async (comprehensiveUserData) 
     throw new Error('Comprehensive user data is required for personalized productivity recommendations.');
   }
 
-  const prompt = `Analyze the following comprehensive user activity and goal data. Provide actionable, intelligent, and empathetic productivity recommendations. Focus on optimizing their workflow, managing time effectively, reducing distractions, and maintaining energy. Suggest specific strategies.
+  const promptContent = `Analyze the following comprehensive user activity and goal data. Provide actionable, intelligent, and empathetic productivity recommendations. Focus on optimizing their workflow, managing time effectively, reducing distractions, and maintaining energy. Suggest specific strategies.
 
 Comprehensive User Data:
 ${JSON.stringify(comprehensiveUserData, null, 2)}
@@ -201,25 +190,20 @@ ${JSON.stringify(comprehensiveUserData, null, 2)}
 Actionable Productivity Recommendations:`;
 
   try {
-    const model = gemini.getGenerativeModel({ model: "gemini-pro" });
-    const chat = model.startChat({
-      history: [
-        { role: "user", parts: [{ text: "You are an AI productivity coach providing intelligent, empathetic, and actionable advice. Structure your advice with clear points." }] },
-      ],
-      generationConfig: {
-        maxOutputTokens: 300,
-        temperature: 0.7,
-      },
-    });
+    const model = gemini.getGenerativeModel({ model: "text-bison-001" }); // --- SWITCHED TO text-bison-001 ---
 
-    const result = await chat.sendMessage(prompt);
+    const result = await model.generateText({ // --- USING generateText ---
+      prompt: { text: promptContent },
+      maxOutputTokens: 300,
+      temperature: 0.7,
+    });
     const response = result.response;
-    return response.text().trim();
+    return response.text.trim(); // Access .text directly
 
   } catch (error) {
-    console.error('Error getting productivity recommendations from Gemini:', error.message);
+    console.error('Error getting productivity recommendations from Gemini (text-bison-001):', error.message);
     if (error.response) {
-      console.error('Gemini API Error details:', error.response.data || error.response.statusText);
+      console.error('Gemini API Error details:', error);
     }
     throw new Error('Failed to get AI productivity recommendations. Please check server logs and Gemini API key/usage limits.');
   }
@@ -241,7 +225,7 @@ const getPersonalizedGoalRecommendation = async (detailedGoalData) => {
     throw new Error('Detailed goal data is required for personalized goal achievement recommendations.');
   }
 
-  const prompt = `Analyze the following detailed goal information. Provide specific, actionable advice and strategies to help the user progress towards this goal. Consider breaking it down further, suggesting relevant learning paths, maintaining motivation, and overcoming potential challenges.
+  const promptContent = `Analyze the following detailed goal information. Provide specific, actionable advice and strategies to help the user progress towards this goal. Consider breaking it down further, suggesting relevant learning paths, maintaining motivation, and overcoming potential challenges.
 
 Detailed Goal Data:
 ${JSON.stringify(detailedGoalData, null, 2)}
@@ -249,25 +233,20 @@ ${JSON.stringify(detailedGoalData, null, 2)}
 Actionable Advice for Goal Achievement:`;
 
   try {
-    const model = gemini.getGenerativeModel({ model: "gemini-pro" });
-    const chat = model.startChat({
-      history: [
-        { role: "user", parts: [{ text: "You are an AI personal growth coach providing intelligent, empathetic, and actionable advice for achieving goals. Break down complex advice into clear, numbered steps or bullet points." }] },
-      ],
-      generationConfig: {
-        maxOutputTokens: 300,
-        temperature: 0.7,
-      },
-    });
+    const model = gemini.getGenerativeModel({ model: "text-bison-001" }); // --- SWITCHED TO text-bison-001 ---
 
-    const result = await chat.sendMessage(prompt);
+    const result = await model.generateText({ // --- USING generateText ---
+      prompt: { text: promptContent },
+      maxOutputTokens: 300,
+      temperature: 0.7,
+    });
     const response = result.response;
-    return response.text().trim();
+    return response.text.trim(); // Access .text directly
 
   } catch (error) {
-    console.error('Error getting goal recommendations from Gemini:', error.message);
+    console.error('Error getting goal recommendations from Gemini (text-bison-001):', error.message);
     if (error.response) {
-      console.error('Gemini API Error details:', error.response.data || error.response.statusText);
+      console.error('Gemini API Error details:', error);
     }
     throw new Error('Failed to get AI goal achievement recommendations. Please check server logs and Gemini API key/usage limits.');
   }
@@ -290,7 +269,7 @@ const getWellnessSuggestion = async (detailedWellnessContext, suggestionType = '
     throw new Error('Detailed user wellness context is required for personalized wellness suggestions.');
   }
 
-  let prompt = `Based on the following detailed user wellness context, provide a specific, actionable, and encouraging wellness suggestion related to "${suggestionType}". Make it empathetic, positive, and easy to implement. Include timing or duration if relevant.
+  let promptContent = `Based on the following detailed user wellness context, provide a specific, actionable, and encouraging wellness suggestion related to "${suggestionType}". Make it empathetic, positive, and easy to implement. Include timing or duration if relevant.
 
 Detailed User Wellness Context:
 ${JSON.stringify(detailedWellnessContext, null, 2)}
@@ -298,25 +277,21 @@ ${JSON.stringify(detailedWellnessContext, null, 2)}
 Wellness Suggestion:`;
 
   try {
-    const model = gemini.getGenerativeModel({ model: "gemini-pro" });
-    const chat = model.startChat({
-      history: [
-        { role: "user", parts: [{ text: "You are an AI wellness assistant providing intelligent, empathetic, and actionable suggestions for health and mental balance. Focus on practical, short tips." }] },
-      ],
-      generationConfig: {
-        maxOutputTokens: 120,
-        temperature: 0.8,
-      },
+    const model = gemini.getGenerativeModel({ model: "text-bison-001" }); // --- SWITCHED TO text-bison-001 ---
+
+    const result = await model.generateText({ // --- USING generateText ---
+      prompt: { text: promptContent },
+      maxOutputTokens: 120,
+      temperature: 0.8,
     });
 
-    const result = await chat.sendMessage(prompt);
     const response = result.response;
-    return response.text().trim();
+    return response.text.trim(); // Access .text directly
 
   } catch (error) {
-    console.error('Error getting wellness suggestion from Gemini:', error.message);
+    console.error('Error getting wellness suggestion from Gemini (text-bison-001):', error.message);
     if (error.response) {
-      console.error('Gemini API Error details:', error.response.data || error.response.statusText);
+      console.error('Gemini API Error details:', error);
     }
     throw new Error('Failed to get AI wellness suggestion. Please check server logs and Gemini API key/usage limits.');
   }
@@ -373,22 +348,16 @@ const generateLearningResources = async (topic, typeHint = 'any', difficulty = '
   `;
 
   try {
-    const model = gemini.getGenerativeModel({ model: "gemini-pro" });
-    const chat = model.startChat({
-      history: [
-        { role: "user", parts: [{ text: systemMessage }] },
-      ],
-      generationConfig: {
-        maxOutputTokens: 700,
-        temperature: 0.7,
-        // Removed response_format: { type: "json_object" } for now if it causes issues,
-        // relying on prompt engineering. If it works for you, you can re-add it.
-      },
+    const model = gemini.getGenerativeModel({ model: "text-bison-001" }); // --- SWITCHED TO text-bison-001 ---
+
+    const result = await model.generateText({ // --- USING generateText ---
+      prompt: { text: userPrompt },
+      maxOutputTokens: 700,
+      temperature: 0.7,
     });
 
-    const result = await chat.sendMessage(userPrompt);
     const response = result.response;
-    let responseText = response.text().trim();
+    let responseText = response.text.trim();
 
     // --- IMPROVED JSON EXTRACTION ---
     // Attempt to extract JSON from markdown code block if present
@@ -423,9 +392,9 @@ const generateLearningResources = async (topic, typeHint = 'any', difficulty = '
     }));
 
   } catch (error) {
-    console.error('Error generating learning resources with Gemini:', error.message);
+    console.error('Error generating learning resources with Gemini (text-bison-001):', error.message);
     if (error.response) {
-      console.error('Gemini API Error details:', error.response.data || error.response.statusText);
+      console.error('Gemini API Error details:', error);
     }
     throw new Error('Failed to generate AI learning resources. Please check server logs and Gemini API key/usage limits.');
   }
