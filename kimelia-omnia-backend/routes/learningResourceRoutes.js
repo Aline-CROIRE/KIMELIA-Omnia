@@ -1,4 +1,3 @@
-
 const express = require('express');
 const {
   getLearningResources,
@@ -12,21 +11,15 @@ const { protect } = require('../middleware/authMiddleware');
 const {
     validateCreateLearningResource,
     validateUpdateLearningResource,
-    validateIdParam // --- ADDED: Import validateIdParam ---
-} = require('../middleware/validationMiddleware'); // Path to your validation middleware
+    validateIdParam // Ensure this is imported
+} = require('../middleware/validationMiddleware');
 
 const router = express.Router();
-
-/**
- * @swagger
- * tags:
- *   name: Learning Resources (Omnia Coach)
- *   description: API for managing user's learning materials and fetching motivational tips.
- */
 
 // Apply protect middleware to all learning resource routes
 router.use(protect);
 
+// --- IMPORTANT: Define the route for fetching ALL resources WITHOUT an ID first ---
 /**
  * @swagger
  * /learning-resources:
@@ -103,9 +96,10 @@ router.use(protect);
  *       500: { $ref: '#/components/responses/ServerError' }
  */
 router.route('/')
-    .get(getLearningResources)
+    .get(getLearningResources) // This is for GET /api/v1/learning-resources
     .post(validateCreateLearningResource, createLearningResource);
 
+// --- Then, define the route for a SINGLE resource WITH an ID ---
 /**
  * @swagger
  * /learning-resources/{id}:
@@ -200,36 +194,11 @@ router.route('/')
  *       500: { $ref: '#/components/responses/ServerError' }
  */
 router.route('/:id')
-    .get(validateIdParam, getLearningResource) // --- ADDED validateIdParam ---
-    .put(validateIdParam, validateUpdateLearningResource, updateLearningResource) // --- ADDED validateIdParam ---
-    .delete(validateIdParam, deleteLearningResource); // --- ADDED validateIdParam ---
+    .get(validateIdParam, getLearningResource) // This is for GET /api/v1/learning-resources/:id
+    .put(validateIdParam, validateUpdateLearningResource, updateLearningResource)
+    .delete(validateIdParam, deleteLearningResource);
 
-/**
- * @swagger
- * /coach/motivational-tip:
- *   get:
- *     summary: Get a motivational tip.
- *     description: Fetches a motivational tip, potentially personalized.
- *     tags: [Learning Resources (Omnia Coach)]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: A motivational tip.
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success: { type: boolean, example: true }
- *                 data:
- *                   type: object
- *                   properties:
- *                     tip: { type: string, example: "Believe you can and you're halfway there." }
- *                     source: { type: string, example: "Omnia Coach" }
- *       401: { $ref: '#/components/responses/UnauthorizedError' }
- *       500: { $ref: '#/components/responses/ServerError' }
- */
+// This route uses a different path segment, so it won't conflict directly.
 router.route('/coach/motivational-tip')
     .get(getMotivationalTipController);
 
