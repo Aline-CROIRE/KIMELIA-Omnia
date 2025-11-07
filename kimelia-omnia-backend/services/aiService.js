@@ -36,7 +36,7 @@ const summarizeText = async (text, promptPrefix = 'Summarize the following text 
 
   try {
     const completion = await groq.chat.completions.create({
-      model: "llama3-8b-8192", // Use a Groq-supported model, e.g., "llama3-8b-8192" or "mixtral-8x7b-32768"
+      model: "llama-3.1-8b-quickchat", // --- UPDATED Groq Model Name ---
       messages: [
         { role: "system", content: "You are a helpful assistant that excels at summarizing text concisely and accurately." },
         { role: "user", content: `${promptPrefix}\n\nText to summarize:\n${text}` },
@@ -81,7 +81,7 @@ const draftMessage = async (instruction, context = '', tone = 'professional', fo
 
   try {
     const completion = await groq.chat.completions.create({
-      model: "llama3-8b-8192", // Use a Groq-supported model
+      model: "llama-3.1-8b-quickchat", // --- UPDATED Groq Model Name ---
       messages: [
         { role: "system", content: "You are a helpful assistant that drafts clear, concise, and appropriate messages." },
         { role: "user", content: userPrompt },
@@ -142,7 +142,7 @@ Motivational Tip:`;
 
   try {
     const completion = await groq.chat.completions.create({
-      model: "llama3-8b-8192", // Use a Groq-supported model
+      model: "llama-3.1-8b-quickchat", // --- UPDATED Groq Model Name ---
       messages: [
         { role: "system", content: "You are an encouraging and wise AI coach, providing concise and impactful motivational tips." },
         { role: "user", content: promptContent },
@@ -187,7 +187,7 @@ Actionable Productivity Recommendations:`;
 
   try {
     const completion = await groq.chat.completions.create({
-      model: "llama3-8b-8192", // Use a Groq-supported model
+      model: "llama-3.1-8b-quickchat", // --- UPDATED Groq Model Name ---
       messages: [
         { role: "system", content: "You are an AI productivity coach providing intelligent, empathetic, and actionable advice. Structure your advice with clear points." },
         { role: "user", content: promptContent },
@@ -230,7 +230,7 @@ Actionable Advice for Goal Achievement:`;
 
   try {
     const completion = await groq.chat.completions.create({
-      model: "llama3-8b-8192", // Use a Groq-supported model
+      model: "llama-3.1-8b-quickchat", // --- UPDATED Groq Model Name ---
       messages: [
         { role: "system", content: "You are an AI personal growth coach providing intelligent, empathetic, and actionable advice for achieving goals. Break down complex advice into clear, numbered steps or bullet points." },
         { role: "user", content: promptContent },
@@ -253,7 +253,6 @@ Actionable Advice for Goal Achievement:`;
  * @function getWellnessSuggestion
  * @description Generates AI-driven wellness suggestions based on detailed user wellness context.
  * @param {Object} detailedWellnessContext - An object containing user's recent wellness activities, schedule, current mood/stress, and requested suggestion type.
- * @param {string} [suggestionType='general'] - Type of suggestion needed (e.g., 'break', 'meal', 'exercise', 'mindfulness', 'hydration', 'sleep_aid').
  * @returns {Promise<string>} - A string containing a personalized wellness suggestion.
  * @throws {Error} If the Groq API call fails or API key is missing.
  */
@@ -274,7 +273,7 @@ Wellness Suggestion:`;
 
   try {
     const completion = await groq.chat.completions.create({
-      model: "llama3-8b-8192", // Use a Groq-supported model
+      model: "llama-3.1-8b-quickchat", // --- UPDATED Groq Model Name ---
       messages: [
         { role: "system", content: "You are an AI wellness assistant providing intelligent, empathetic, and actionable suggestions for health and mental balance. Focus on practical, short tips." },
         { role: "user", content: promptContent },
@@ -345,7 +344,7 @@ const generateLearningResources = async (topic, typeHint = 'any', difficulty = '
 
   try {
     const completion = await groq.chat.completions.create({
-      model: "llama3-8b-8192", // Use a Groq-supported model
+      model: "llama-3.1-8b-quickchat", // --- UPDATED Groq Model Name ---
       messages: [
         { role: "system", content: systemMessage },
         { role: "user", content: userPrompt },
@@ -357,8 +356,6 @@ const generateLearningResources = async (topic, typeHint = 'any', difficulty = '
 
     const responseContent = completion.choices[0].message.content.trim();
 
-    // Groq's Llama 3 with response_format should ideally return clean JSON,
-    // but keep the markdown extraction as a robust fallback.
     const jsonMatch = responseContent.match(/```json\n([\s\S]*?)\n```/);
     let jsonString = responseContent;
     if (jsonMatch && jsonMatch[1]) {
@@ -391,8 +388,7 @@ const generateLearningResources = async (topic, typeHint = 'any', difficulty = '
     }));
 
   } catch (error) {
-    console.error('Error generating learning resources with Groq (llama3-8b-8192):', error.message);
-    // Groq errors are typically similar to OpenAI errors, check structure
+    console.error('Error generating learning resources with Groq (llama-3.1-8b-quickchat):', error.message);
     if (error.response && error.response.data && error.response.data.error) {
         console.error('Groq API Error details:', error.response.data.error);
     } else {
