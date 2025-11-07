@@ -19,7 +19,15 @@ const router = express.Router();
 // Apply protect middleware to all learning resource routes
 router.use(protect);
 
-// --- IMPORTANT: Define the route for fetching ALL resources WITHOUT an ID first ---
+/**
+ * @swagger
+ * tags:
+ *   name: Learning Resources (Omnia Coach)
+ *   description: API for managing user's learning materials and fetching motivational tips.
+ */
+
+// --- EXPLICITLY DEFINE THE BASE /learning-resources ROUTES FIRST ---
+
 /**
  * @swagger
  * /learning-resources:
@@ -65,6 +73,12 @@ router.use(protect);
  *                   items: { $ref: '#/components/schemas/LearningResource' }
  *       401: { $ref: '#/components/responses/UnauthorizedError' }
  *       500: { $ref: '#/components/responses/ServerError' }
+ */
+router.get('/', getLearningResources); // Handles GET /api/v1/learning-resources
+
+/**
+ * @swagger
+ * /learning-resources:
  *   post:
  *     summary: Create a new learning resource for the authenticated user.
  *     description: Adds a new learning resource. The `user` field is automatically set.
@@ -95,11 +109,11 @@ router.use(protect);
  *       401: { $ref: '#/components/responses/UnauthorizedError' }
  *       500: { $ref: '#/components/responses/ServerError' }
  */
-router.route('/')
-    .get(getLearningResources) // This is for GET /api/v1/learning-resources
-    .post(validateCreateLearningResource, createLearningResource);
+router.post('/', validateCreateLearningResource, createLearningResource); // Handles POST /api/v1/learning-resources
+
 
 // --- Then, define the route for a SINGLE resource WITH an ID ---
+
 /**
  * @swagger
  * /learning-resources/{id}:
@@ -193,13 +207,11 @@ router.route('/')
  *       404: { $ref: '#/components/responses/NotFoundError' }
  *       500: { $ref: '#/components/responses/ServerError' }
  */
-router.route('/:id')
-    .get(validateIdParam, getLearningResource) // This is for GET /api/v1/learning-resources/:id
-    .put(validateIdParam, validateUpdateLearningResource, updateLearningResource)
-    .delete(validateIdParam, deleteLearningResource);
+router.get('/:id', validateIdParam, getLearningResource);
+router.put('/:id', validateIdParam, validateUpdateLearningResource, updateLearningResource);
+router.delete('/:id', validateIdParam, deleteLearningResource);
 
 // This route uses a different path segment, so it won't conflict directly.
-router.route('/coach/motivational-tip')
-    .get(getMotivationalTipController);
+router.get('/coach/motivational-tip', getMotivationalTipController);
 
 module.exports = router;
