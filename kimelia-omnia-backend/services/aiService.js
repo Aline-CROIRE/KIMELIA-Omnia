@@ -16,6 +16,41 @@ const isGroqAvailable = () => {
   return !!groq;
 };
 
+// --- Define a prioritized list of Groq models to try ---
+const GROQ_MODELS_FALLBACK_CHAIN = [
+    "llama3-70b-8192",   // Try the larger, potentially more capable model first
+    "llama3-8b-8192",    // Then the smaller Llama 3
+    "mixtral-8x7b-32768", // A robust, generally available alternative
+    "gemma-7b-it"        // Another option
+];
+
+// Function to try models in the fallback chain
+async function tryGroqModel(messages, generationConfig, functionName) {
+    for (const modelName of GROQ_MODELS_FALLBACK_CHAIN) {
+        try {
+            console.log(`[Groq AI Service] Trying model: ${modelName} for ${functionName}`);
+            const completion = await groq.chat.completions.create({
+                model: modelName,
+                messages: messages,
+                ...generationConfig // Include other config like max_tokens, temperature, response_format
+            });
+            console.log(`[Groq AI Service] Successfully used model: ${modelName} for ${functionName}`);
+            return completion; // Return the successful completion
+        } catch (error) {
+            console.error(`[Groq AI Service] Failed with model ${modelName} for ${functionName}: ${error.message}`);
+            // If it's a 'model_not_found' or 'model_decommissioned' error, try the next model
+            if (error.code === 'model_not_found' || error.code === 'model_decommissioned' || error.status === 404) {
+                console.warn(`[Groq AI Service] Model ${modelName} not available or decommissioned. Trying next model...`);
+                continue; // Try the next model in the chain
+            }
+            // For other errors (e.g., quota, invalid prompt), re-throw
+            throw error;
+        }
+    }
+    throw new Error(`All configured Groq models failed for ${functionName}. Please check logs and Groq console for model availability/quotas.`);
+}
+
+
 // --- AI-Powered Text Operations (Summarization & Drafting) ---
 
 /**
@@ -35,22 +70,19 @@ const summarizeText = async (text, promptPrefix = 'Summarize the following text 
   }
 
   try {
-    const completion = await groq.chat.completions.create({
-      model: "llama-3.1-8b-quickchat", // --- UPDATED Groq Model Name ---
-      messages: [
-        { role: "system", content: "You are a helpful assistant that excels at summarizing text concisely and accurately." },
-        { role: "user", content: `${promptPrefix}\n\nText to summarize:\n${text}` },
-      ],
+    const messages = [
+      { role: "system", content: "You are a helpful assistant that excels at summarizing text concisely and accurately." },
+      { role: "user", content: `${promptPrefix}\n\nText to summarize:\n${text}` },
+    ];
+    const generationConfig = {
       max_tokens: 150,
       temperature: 0.5,
-    });
+    };
 
+    const completion = await tryGroqModel(messages, generationConfig, "summarizeText");
     return completion.choices[0].message.content.trim();
   } catch (error) {
     console.error('Error summarizing text with Groq:', error.message);
-    if (error.response && error.response.data && error.response.data.error) {
-        console.error('Groq API Error details:', error.response.data.error);
-    }
     throw new Error('Failed to summarize text using AI. Please check server logs and your Groq API key/usage limits.');
   }
 };
@@ -80,22 +112,19 @@ const draftMessage = async (instruction, context = '', tone = 'professional', fo
   userPrompt += ` Ensure the draft is in a ${tone} tone and formatted as a ${format}.`;
 
   try {
-    const completion = await groq.chat.completions.create({
-      model: "llama-3.1-8b-quickchat", // --- UPDATED Groq Model Name ---
-      messages: [
-        { role: "system", content: "You are a helpful assistant that drafts clear, concise, and appropriate messages." },
-        { role: "user", content: userPrompt },
-      ],
+    const messages = [
+      { role: "system", content: "You are a helpful assistant that drafts clear, concise, and appropriate messages." },
+      { role: "user", content: userPrompt },
+    ];
+    const generationConfig = {
       max_tokens: 300,
       temperature: 0.7,
-    });
+    };
 
+    const completion = await tryGroqModel(messages, generationConfig, "draftMessage");
     return completion.choices[0].message.content.trim();
   } catch (error) {
     console.error('Error drafting message with Groq:', error.message);
-    if (error.response && error.response.data && error.response.data.error) {
-        console.error('Groq API Error details:', error.response.data.error);
-    }
     throw new Error('Failed to draft message using AI. Please check server logs and your Groq API key/usage limits.');
   }
 };
@@ -141,23 +170,21 @@ Motivational Tip:`;
   }
 
   try {
-    const completion = await groq.chat.completions.create({
-      model: "llama-3.1-8b-quickchat", // --- UPDATED Groq Model Name ---
-      messages: [
-        { role: "system", content: "You are an encouraging and wise AI coach, providing concise and impactful motivational tips." },
-        { role: "user", content: promptContent },
-      ],
+    const messages = [
+      { role: "system", content: "You are an encouraging and wise AI coach, providing concise and impactful motivational tips." },
+      { role: "user", content: promptContent },
+    ];
+    const generationConfig = {
       max_tokens: 80,
       temperature: 0.9,
-    });
+    };
+
+    const completion = await tryGroqModel(messages, generationConfig, "getMotivationalTip");
     return completion.choices[0].message.content.trim();
   } catch (error) {
     console.error('Error getting AI motivational tip with Groq:', error.message);
-    if (error.response && error.response.data && error.response.data.error) {
-        console.error('Groq API Error details:', error.response.data.error);
-    }
     const randomIndex = Math.floor(Math.random() * staticMotivationalTips.length);
-    return staticMotivationalTips[randomIndex];
+    return staticMotivationalTips[randomIndex]; // Fallback to static even on API error
   }
 };
 
@@ -186,22 +213,19 @@ ${JSON.stringify(comprehensiveUserData, null, 2)}
 Actionable Productivity Recommendations:`;
 
   try {
-    const completion = await groq.chat.completions.create({
-      model: "llama-3.1-8b-quickchat", // --- UPDATED Groq Model Name ---
-      messages: [
-        { role: "system", content: "You are an AI productivity coach providing intelligent, empathetic, and actionable advice. Structure your advice with clear points." },
-        { role: "user", content: promptContent },
-      ],
+    const messages = [
+      { role: "system", content: "You are an AI productivity coach providing intelligent, empathetic, and actionable advice. Structure your advice with clear points." },
+      { role: "user", content: promptContent },
+    ];
+    const generationConfig = {
       max_tokens: 300,
       temperature: 0.7,
-    });
-    const response = completion.choices[0].message.content.trim();
-    return response;
+    };
+
+    const completion = await tryGroqModel(messages, generationConfig, "getPersonalizedProductivityRecommendation");
+    return completion.choices[0].message.content.trim();
   } catch (error) {
     console.error('Error getting productivity recommendations from Groq:', error.message);
-    if (error.response && error.response.data && error.response.data.error) {
-        console.error('Groq API Error details:', error.response.data.error);
-    }
     throw new Error('Failed to get AI productivity recommendations. Please check server logs and Groq API key/usage limits.');
   }
 };
@@ -229,22 +253,19 @@ ${JSON.stringify(detailedGoalData, null, 2)}
 Actionable Advice for Goal Achievement:`;
 
   try {
-    const completion = await groq.chat.completions.create({
-      model: "llama-3.1-8b-quickchat", // --- UPDATED Groq Model Name ---
-      messages: [
-        { role: "system", content: "You are an AI personal growth coach providing intelligent, empathetic, and actionable advice for achieving goals. Break down complex advice into clear, numbered steps or bullet points." },
-        { role: "user", content: promptContent },
-      ],
+    const messages = [
+      { role: "system", content: "You are an AI personal growth coach providing intelligent, empathetic, and actionable advice for achieving goals. Break down complex advice into clear, numbered steps or bullet points." },
+      { role: "user", content: promptContent },
+    ];
+    const generationConfig = {
       max_tokens: 300,
       temperature: 0.7,
-    });
-    const response = completion.choices[0].message.content.trim();
-    return response;
+    };
+
+    const completion = await tryGroqModel(messages, generationConfig, "getPersonalizedGoalRecommendation");
+    return completion.choices[0].message.content.trim();
   } catch (error) {
     console.error('Error getting goal recommendations from Groq:', error.message);
-    if (error.response && error.response.data && error.response.data.error) {
-        console.error('Groq API Error details:', error.response.data.error);
-    }
     throw new Error('Failed to get AI goal achievement recommendations. Please check server logs and Groq API key/usage limits.');
   }
 };
@@ -253,6 +274,7 @@ Actionable Advice for Goal Achievement:`;
  * @function getWellnessSuggestion
  * @description Generates AI-driven wellness suggestions based on detailed user wellness context.
  * @param {Object} detailedWellnessContext - An object containing user's recent wellness activities, schedule, current mood/stress, and requested suggestion type.
+ * @param {string} [suggestionType='general'] - Type of suggestion needed (e.g., 'break', 'meal', 'exercise', 'mindfulness', 'hydration', 'sleep_aid').
  * @returns {Promise<string>} - A string containing a personalized wellness suggestion.
  * @throws {Error} If the Groq API call fails or API key is missing.
  */
@@ -272,24 +294,19 @@ ${JSON.stringify(detailedWellnessContext, null, 2)}
 Wellness Suggestion:`;
 
   try {
-    const completion = await groq.chat.completions.create({
-      model: "llama-3.1-8b-quickchat", // --- UPDATED Groq Model Name ---
-      messages: [
-        { role: "system", content: "You are an AI wellness assistant providing intelligent, empathetic, and actionable suggestions for health and mental balance. Focus on practical, short tips." },
-        { role: "user", content: promptContent },
-      ],
+    const messages = [
+      { role: "system", content: "You are an AI wellness assistant providing intelligent, empathetic, and actionable suggestions for health and mental balance. Focus on practical, short tips." },
+      { role: "user", content: promptContent },
+    ];
+    const generationConfig = {
       max_tokens: 120,
       temperature: 0.8,
-    });
+    };
 
-    const response = completion.choices[0].message.content.trim();
-    return response;
-
+    const completion = await tryGroqModel(messages, generationConfig, "getWellnessSuggestion");
+    return completion.choices[0].message.content.trim();
   } catch (error) {
     console.error('Error getting wellness suggestion from Groq:', error.message);
-    if (error.response && error.response.data && error.response.data.error) {
-        console.error('Groq API Error details:', error.response.data.error);
-    }
     throw new Error('Failed to get AI wellness suggestion. Please check server logs and Groq API key/usage limits.');
   }
 };
@@ -343,17 +360,17 @@ const generateLearningResources = async (topic, typeHint = 'any', difficulty = '
   `;
 
   try {
-    const completion = await groq.chat.completions.create({
-      model: "llama-3.1-8b-quickchat", // --- UPDATED Groq Model Name ---
-      messages: [
-        { role: "system", content: systemMessage },
-        { role: "user", content: userPrompt },
-      ],
+    const messages = [
+      { role: "system", content: systemMessage },
+      { role: "user", content: userPrompt },
+    ];
+    const generationConfig = {
       max_tokens: 700,
       temperature: 0.7,
       response_format: { type: "json_object" }, // Groq supports this for Llama 3
-    });
+    };
 
+    const completion = await tryGroqModel(messages, generationConfig, "generateLearningResources");
     const responseContent = completion.choices[0].message.content.trim();
 
     const jsonMatch = responseContent.match(/```json\n([\s\S]*?)\n```/);
@@ -388,12 +405,7 @@ const generateLearningResources = async (topic, typeHint = 'any', difficulty = '
     }));
 
   } catch (error) {
-    console.error('Error generating learning resources with Groq (llama-3.1-8b-quickchat):', error.message);
-    if (error.response && error.response.data && error.response.data.error) {
-        console.error('Groq API Error details:', error.response.data.error);
-    } else {
-        console.error('Groq API Error details (full object):', error);
-    }
+    console.error('Error generating learning resources with Groq:', error.message);
     throw new Error('Failed to generate AI learning resources. Please check server logs and your Groq API key/usage limits.');
   }
 };
