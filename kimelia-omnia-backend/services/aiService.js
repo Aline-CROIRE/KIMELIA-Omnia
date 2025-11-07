@@ -1,16 +1,16 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 // Initialize Google Generative AI client with API key from environment variables
-let gemini; // Renaming for clarity as we'll use PaLM 2 via GenerativeAI client
+let genAI; // Renaming to genAI to avoid confusion with the 'gemini' variable in some older examples
 if (process.env.GEMINI_API_KEY) {
-  gemini = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+  genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 } else {
   console.warn('GEMINI_API_KEY is not configured. AI services will be limited or use fallbacks.');
 }
 
 // Helper to check if AI is available
 const isGeminiAvailable = () => {
-  return !!gemini;
+  return !!genAI;
 };
 
 // --- AI-Powered Text Operations (Summarization & Drafting) ---
@@ -32,18 +32,21 @@ const summarizeText = async (text, promptPrefix = 'Summarize the following text 
   }
 
   try {
-    const model = gemini.getGenerativeModel({ model: "text-bison-001" }); // --- SWITCHED TO text-bison-001 ---
+    // Use text-bison-001 for text generation tasks via generateContent
+    const model = genAI.getGenerativeModel({ model: "text-bison-001" });
 
     const fullPrompt = `${promptPrefix}\n\nText to summarize:\n${text}`;
 
-    const result = await model.generateText({ // --- USING generateText ---
-      prompt: { text: fullPrompt },
-      temperature: 0.5,
-      maxOutputTokens: 150,
+    const result = await model.generateContent({ // Use generateContent
+      contents: [{ role: "user", parts: [{ text: fullPrompt }] }], // Correct format for contents
+      generationConfig: {
+        maxOutputTokens: 150,
+        temperature: 0.5,
+      },
     });
 
     const response = result.response;
-    return response.text.trim(); // Access .text directly
+    return response.text().trim();
 
   } catch (error) {
     console.error('Error summarizing text with Gemini (text-bison-001):', error.message);
@@ -79,16 +82,18 @@ const draftMessage = async (instruction, context = '', tone = 'professional', fo
   userPrompt += ` Ensure the draft is in a ${tone} tone and formatted as a ${format}.`;
 
   try {
-    const model = gemini.getGenerativeModel({ model: "text-bison-001" }); // --- SWITCHED TO text-bison-001 ---
+    const model = genAI.getGenerativeModel({ model: "text-bison-001" });
 
-    const result = await model.generateText({ // --- USING generateText ---
-      prompt: { text: userPrompt },
-      temperature: 0.7,
-      maxOutputTokens: 300,
+    const result = await model.generateContent({ // Use generateContent
+      contents: [{ role: "user", parts: [{ text: userPrompt }] }], // Correct format for contents
+      generationConfig: {
+        maxOutputTokens: 300,
+        temperature: 0.7,
+      },
     });
 
     const response = result.response;
-    return response.text.trim(); // Access .text directly
+    return response.text().trim();
 
   } catch (error) {
     console.error('Error drafting message with Gemini (text-bison-001):', error.message);
@@ -142,16 +147,21 @@ Motivational Tip:`;
   }
 
   try {
-    const model = gemini.getGenerativeModel({ model: "text-bison-001" }); // --- SWITCHED TO text-bison-001 ---
+    const model = genAI.getGenerativeModel({ model: "text-bison-001" });
 
-    const result = await model.generateText({ // --- USING generateText ---
-      prompt: { text: promptContent },
-      temperature: 0.9,
-      maxOutputTokens: 80,
+    const result = await model.generateContent({ // Use generateContent
+      contents: [
+        { role: "user", parts: [{ text: "You are an encouraging and wise AI coach, providing concise and impactful motivational tips." }] },
+        { role: "user", parts: [{ text: promptContent }] },
+      ],
+      generationConfig: {
+        maxOutputTokens: 80,
+        temperature: 0.9,
+      },
     });
 
     const response = result.response;
-    return response.text.trim(); // Access .text directly
+    return response.text().trim();
 
   } catch (error) {
     console.error('Error getting AI motivational tip with Gemini (text-bison-001):', error.message);
@@ -190,15 +200,20 @@ ${JSON.stringify(comprehensiveUserData, null, 2)}
 Actionable Productivity Recommendations:`;
 
   try {
-    const model = gemini.getGenerativeModel({ model: "text-bison-001" }); // --- SWITCHED TO text-bison-001 ---
+    const model = genAI.getGenerativeModel({ model: "text-bison-001" });
 
-    const result = await model.generateText({ // --- USING generateText ---
-      prompt: { text: promptContent },
-      maxOutputTokens: 300,
-      temperature: 0.7,
+    const result = await model.generateContent({ // Use generateContent
+      contents: [
+        { role: "user", parts: [{ text: "You are an AI productivity coach providing intelligent, empathetic, and actionable advice. Structure your advice with clear points." }] },
+        { role: "user", parts: [{ text: promptContent }] },
+      ],
+      generationConfig: {
+        maxOutputTokens: 300,
+        temperature: 0.7,
+      },
     });
     const response = result.response;
-    return response.text.trim(); // Access .text directly
+    return response.text().trim();
 
   } catch (error) {
     console.error('Error getting productivity recommendations from Gemini (text-bison-001):', error.message);
@@ -233,15 +248,20 @@ ${JSON.stringify(detailedGoalData, null, 2)}
 Actionable Advice for Goal Achievement:`;
 
   try {
-    const model = gemini.getGenerativeModel({ model: "text-bison-001" }); // --- SWITCHED TO text-bison-001 ---
+    const model = genAI.getGenerativeModel({ model: "text-bison-001" });
 
-    const result = await model.generateText({ // --- USING generateText ---
-      prompt: { text: promptContent },
-      maxOutputTokens: 300,
-      temperature: 0.7,
+    const result = await model.generateContent({ // Use generateContent
+      contents: [
+        { role: "user", parts: [{ text: "You are an AI personal growth coach providing intelligent, empathetic, and actionable advice for achieving goals. Break down complex advice into clear, numbered steps or bullet points." }] },
+        { role: "user", parts: [{ text: promptContent }] },
+      ],
+      generationConfig: {
+        maxOutputTokens: 300,
+        temperature: 0.7,
+      },
     });
     const response = result.response;
-    return response.text.trim(); // Access .text directly
+    return response.text().trim();
 
   } catch (error) {
     console.error('Error getting goal recommendations from Gemini (text-bison-001):', error.message);
@@ -277,16 +297,21 @@ ${JSON.stringify(detailedWellnessContext, null, 2)}
 Wellness Suggestion:`;
 
   try {
-    const model = gemini.getGenerativeModel({ model: "text-bison-001" }); // --- SWITCHED TO text-bison-001 ---
+    const model = genAI.getGenerativeModel({ model: "text-bison-001" });
 
-    const result = await model.generateText({ // --- USING generateText ---
-      prompt: { text: promptContent },
-      maxOutputTokens: 120,
-      temperature: 0.8,
+    const result = await model.generateContent({ // Use generateContent
+      contents: [
+        { role: "user", parts: [{ text: "You are an AI wellness assistant providing intelligent, empathetic, and actionable suggestions for health and mental balance. Focus on practical, short tips." }] },
+        { role: "user", parts: [{ text: promptContent }] },
+      ],
+      generationConfig: {
+        maxOutputTokens: 120,
+        temperature: 0.8,
+      },
     });
 
     const response = result.response;
-    return response.text.trim(); // Access .text directly
+    return response.text().trim();
 
   } catch (error) {
     console.error('Error getting wellness suggestion from Gemini (text-bison-001):', error.message);
@@ -348,16 +373,21 @@ const generateLearningResources = async (topic, typeHint = 'any', difficulty = '
   `;
 
   try {
-    const model = gemini.getGenerativeModel({ model: "text-bison-001" }); // --- SWITCHED TO text-bison-001 ---
+    const model = genAI.getGenerativeModel({ model: "text-bison-001" });
 
-    const result = await model.generateText({ // --- USING generateText ---
-      prompt: { text: userPrompt },
-      maxOutputTokens: 700,
-      temperature: 0.7,
+    const result = await model.generateContent({ // Use generateContent
+      contents: [
+        { role: "user", parts: [{ text: systemMessage }] },
+        { role: "user", parts: [{ text: userPrompt }] },
+      ],
+      generationConfig: {
+        maxOutputTokens: 700,
+        temperature: 0.7,
+      },
     });
 
     const response = result.response;
-    let responseText = response.text.trim();
+    let responseText = response.text().trim();
 
     // --- IMPROVED JSON EXTRACTION ---
     // Attempt to extract JSON from markdown code block if present
