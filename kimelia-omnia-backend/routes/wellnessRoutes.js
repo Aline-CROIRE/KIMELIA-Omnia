@@ -12,7 +12,7 @@ const {
     validateCreateWellnessRecord,
     validateUpdateWellnessRecord,
     validateWellnessSuggestion,
-    validateIdParam // --- ADDED: Import validateIdParam ---
+    validateIdParam // Ensure this is imported
 } = require('../middleware/validationMiddleware');
 const router = express.Router();
 
@@ -25,6 +25,8 @@ const router = express.Router();
 
 // Apply protect middleware to all wellness routes
 router.use(protect);
+
+// --- CORRECTED: Define base routes using '/' relative to mount point ---
 
 /**
  * @swagger
@@ -120,7 +122,7 @@ router.use(protect);
  *       500:
  *         $ref: '#/components/responses/ServerError'
  */
-router.route('/wellness-records')
+router.route('/') // --- CORRECTED: Use '/' for base path ---
     .get(getWellnessRecords)
     .post(validateCreateWellnessRecord, createWellnessRecord);
 
@@ -239,10 +241,10 @@ router.route('/wellness-records')
  *       500:
  *         $ref: '#/components/responses/ServerError'
  */
-router.route('/wellness-records/:id')
-    .get(validateIdParam, getWellnessRecord) // --- ADDED validateIdParam ---
-    .put(validateIdParam, validateUpdateWellnessRecord, updateWellnessRecord) // --- ADDED validateIdParam ---
-    .delete(validateIdParam, deleteWellnessRecord); // --- ADDED validateIdParam ---
+router.route('/:id') // --- CORRECTED: Use '/:id' for individual record path ---
+    .get(validateIdParam, getWellnessRecord)
+    .put(validateIdParam, validateUpdateWellnessRecord, updateWellnessRecord)
+    .delete(validateIdParam, deleteWellnessRecord);
 
 /**
  * @swagger
@@ -291,6 +293,6 @@ router.route('/wellness-records/:id')
  *       500:
  *         $ref: '#/components/responses/ServerError'
  */
-router.post('/wellness/suggest', validateWellnessSuggestion, getWellnessSuggestionController);
+router.post('/suggest', validateWellnessSuggestion, getWellnessSuggestionController); // --- CORRECTED: Use '/suggest' relative to mount point ---
 
 module.exports = router;
