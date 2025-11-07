@@ -10,7 +10,7 @@ const JoiObjectId = Joi.extend((joi) => ({
   },
   validate(value, helpers) {
     // --- IMPORTANT DEBUG LOGS ---
-    console.log(`[JoiObjectId.validate Debug] Param Value: '${value}', Type: ${typeof value}`);
+    // console.log(`[JoiObjectId.validate Debug] Param Value: '${value}', Type: ${typeof value}`); // Keep this line for debugging if needed
     // --- END IMPORTANT DEBUG LOGS ---
     if (!Types.ObjectId.isValid(value)) {
       return { value, errors: helpers.error('objectId.invalid') };
@@ -26,6 +26,7 @@ const paramIdSchema = Joi.object({
 
 const dateSchema = Joi.date().iso(); // ISO 8601 date format
 
+// --- User Authentication & Profile Schemas ---
 const registerSchema = Joi.object({
   name: Joi.string().min(2).max(50).required(),
   email: Joi.string().email().required(),
@@ -74,6 +75,14 @@ const taskReminderSchema = Joi.object({
     isSent: Joi.boolean().default(false).optional()
 });
 
+const goalReminderSchema = Joi.object({
+  time: dateSchema.required(),
+  message: Joi.string().optional().allow(''),
+  method: Joi.string().valid('email', 'app_notification', 'sms').default('app_notification').optional(),
+  isSent: Joi.boolean().default(false).optional()
+});
+
+
 // --- Task Schemas ---
 const taskSchema = Joi.object({
   title: Joi.string().min(5).max(200).required(),
@@ -96,6 +105,7 @@ const updateTaskSchema = Joi.object({
   reminders: Joi.array().items(taskReminderSchema).optional(),
   relatedGoal: JoiObjectId.objectId().optional().allow(null),
 }).min(1);
+
 
 // --- Event Schemas ---
 const eventSchema = Joi.object({
@@ -129,8 +139,8 @@ const updateEventSchema = Joi.object({
 
 // --- Message Schemas ---
 const messageSchema = Joi.object({
-  sender: JoiObjectId.objectId().required(),
-  recipient: JoiObjectId.objectId().required(),
+  sender: JoiObjectId.objectId().required(), // Assuming internal sender ID
+  recipient: JoiObjectId.objectId().required(), // Assuming internal recipient ID
   subject: Joi.string().min(1).max(200).required(),
   body: Joi.string().min(1).optional().allow(''),
   type: Joi.string().valid('email', 'chat', 'notification').default('chat').optional(),
@@ -173,13 +183,6 @@ const generateDraftSchema = Joi.object({
 
 
 // --- Goal Schemas ---
-const goalReminderSchema = Joi.object({
-  time: dateSchema.required(),
-  message: Joi.string().optional().allow(''),
-  method: Joi.string().valid('email', 'app_notification', 'sms').default('app_notification').optional(),
-  isSent: Joi.boolean().default(false).optional()
-});
-
 const goalSchema = Joi.object({
   title: Joi.string().min(5).max(200).required(),
   description: Joi.string().max(1000).optional().allow(''),
@@ -231,6 +234,14 @@ const updateLearningResourceSchema = Joi.object({
   relatedGoal: JoiObjectId.objectId().optional().allow(null),
   source: Joi.string().valid('manual', 'AI_suggested', 'web_scrape', 'imported').optional(),
 }).min(1);
+
+// --- NEW: AI Learning Resource Generation Schema ---
+const aiGenerateLearningResourceSchema = Joi.object({
+  topic: Joi.string().min(10).required(),
+  typeHint: Joi.string().valid('articles', 'videos', 'courses', 'books', 'podcasts', 'tools', 'any').default('any').optional(),
+  difficulty: Joi.string().valid('beginner', 'intermediate', 'advanced', 'expert').default('beginner').optional(),
+  relatedGoal: JoiObjectId.objectId().optional().allow(null),
+});
 
 
 // --- Project Schemas ---
@@ -371,13 +382,13 @@ const sendGmailDraftSchema = Joi.object({
  * @returns {Function} Express middleware.
  */
 const validate = (schema, property = 'body') => (req, res, next) => {
-  console.log(`[Validation Middleware] Validating property '${property}'.`);
-  if (property === 'params') {
-    console.log(`[Validation Middleware] req.params:`, req.params); // Log all params
-  }
-  if (property === 'query') {
-    console.log(`[Validation Middleware] req.query:`, req.query); // Log all queries
-  }
+  // console.log(`[Validation Middleware] Validating property '${property}'.`); // Uncomment for debugging
+  // if (property === 'params') {
+  //   console.log(`[Validation Middleware] req.params:`, req.params); // Uncomment for debugging
+  // }
+  // if (property === 'query') {
+  //   console.log(`[Validation Middleware] req.query:`, req.query); // Uncomment for debugging
+  // }
 
 
   const context = { $now: new Date() };
@@ -403,43 +414,49 @@ module.exports = {
   // Validate a generic ID in params - use this specifically for routes needing ID validation
   validateIdParam: validate(paramIdSchema, 'params'),
 
+  // User Authentication & Admin
   validateRegister: validate(registerSchema),
   validateLogin: validate(loginSchema),
   validateVerifyEmail: validate(verifyEmailSchema),
   validateUpdateUserProfile: validate(updateUserProfileSchema),
   validateAdminUpdateUser: validate(adminUpdateUserSchema),
 
+  // Planner Module
   validateCreateTask: validate(taskSchema),
   validateUpdateTask: validate(updateTaskSchema),
-
   validateCreateEvent: validate(eventSchema),
   validateUpdateEvent: validate(updateEventSchema),
 
+  // Communicator Module
   validateCreateMessage: validate(messageSchema),
   validateUpdateMessage: validate(updateMessageSchema),
   validateSummarizeContent: validate(summarizeContentSchema),
   validateGenerateDraft: validate(generateDraftSchema),
 
+  // Coach Module
   validateCreateGoal: validate(goalSchema),
   validateUpdateGoal: validate(updateGoalSchema),
-
   validateCreateLearningResource: validate(learningResourceSchema),
   validateUpdateLearningResource: validate(updateLearningResourceSchema),
+  validateAiGenerateLearningResource: validate(aiGenerateLearningResourceSchema), // --- NEW EXPORT ---
 
+  // Workspace Module
   validateCreateProject: validate(projectSchema),
   validateUpdateProject: validate(updateProjectSchema),
   validateAddRemoveMember: validate(addRemoveMemberSchema),
 
+  // Finance Module
   validateCreateExpense: validate(expenseSchema),
   validateUpdateExpense: validate(updateExpenseSchema),
-
   validateCreateBudget: validate(budgetSchema),
   validateUpdateBudget: validate(updateBudgetSchema),
 
+  // Wellness Module
   validateCreateWellnessRecord: validate(wellnessRecordSchema),
   validateUpdateWellnessRecord: validate(updateWellnessRecordSchema),
   validateWellnessSuggestion: validate(wellnessSuggestionSchema),
 
+  // Integrations Module
   validateSlackMessage: validate(slackMessageSchema),
   validateSummarizeSlackChannel: validate(summarizeSlackChannelSchema),
   validateSummarizeGmailInbox: validate(summarizeGmailInboxSchema),

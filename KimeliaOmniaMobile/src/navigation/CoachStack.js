@@ -7,11 +7,12 @@ import CoachHomeScreen from '../screens/App/Coach/CoachHomeScreen';
 import GoalListScreen from '../screens/App/Coach/GoalList/GoalListScreen';
 import GoalDetailScreen from '../screens/App/Coach/GoalList/GoalDetailScreen';
 import GoalFormScreen from '../screens/App/Coach/GoalList/GoalFormScreen';
-// --- NEW IMPORTS for Learning Resources ---
+// --- IMPORTS for Learning Resources ---
 import LearningResourceListScreen from '../screens/App/Coach/LearningResource/LearningResourceListScreen';
 import LearningResourceDetailScreen from '../screens/App/Coach/LearningResource/LearningResourceDetailScreen';
 import LearningResourceFormScreen from '../screens/App/Coach/LearningResource/LearningResourceFormScreen';
-// --- END NEW IMPORTS ---
+import LearningResourceAIGenerateScreen from '../screens/App/Coach/LearningResource/LearningResourceAIGenerateScreen'; // --- NEW IMPORT ---
+// --- END IMPORTS ---
 
 const CoachStack = createNativeStackNavigator();
 
@@ -35,11 +36,12 @@ const CoachStackScreen = () => {
       <CoachStack.Screen name="GoalDetail" component={GoalDetailScreen} options={({ route }) => ({ title: route.params?.goalTitle || 'Goal Details' })} />
       <CoachStack.Screen name="GoalForm" component={GoalFormScreen} options={({ route }) => ({ title: route.params?.goalId ? 'Edit Goal' : 'Create Goal' })} />
 
-      {/* --- NEW ROUTES for Learning Resources --- */}
+      {/* --- ROUTES for Learning Resources --- */}
       <CoachStack.Screen name="LearningResourceList" component={LearningResourceListScreen} options={{ title: 'My Resources' }} />
       <CoachStack.Screen name="LearningResourceDetail" component={LearningResourceDetailScreen} options={({ route }) => ({ title: route.params?.resourceTitle || 'Resource Details' })} />
       <CoachStack.Screen name="LearningResourceForm" component={LearningResourceFormScreen} options={({ route }) => ({ title: route.params?.resourceId ? 'Edit Resource' : 'Add Resource' })} />
-      {/* --- END NEW ROUTES --- */}
+      <CoachStack.Screen name="LearningResourceAIGenerate" component={LearningResourceAIGenerateScreen} options={{ title: 'AI Generate Resources' }} /> {/* --- NEW ROUTE --- */}
+      {/* --- END ROUTES --- */}
     </CoachStack.Navigator>
   );
 };

@@ -22,7 +22,8 @@ const getTabBarVisibility = (route) => {
     'TaskForm', 'TaskDetail', 'EventForm', 'EventDetail',
     'MessageForm', 'MessageDetail',
     'GoalForm', 'GoalDetail',
-    'LearningResourceForm', 'LearningResourceDetail', // --- NEW: Add Learning Resource detail/form screens ---
+    'LearningResourceForm', 'LearningResourceDetail',
+    'LearningResourceAIGenerate', // --- NEW: Add AI Generate screen here ---
     // 'ProjectForm', 'ProjectDetail', // Still commented out for now
   ];
   if (hideOnScreens.includes(routeName)) {
