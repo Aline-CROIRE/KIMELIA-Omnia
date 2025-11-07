@@ -1,16 +1,19 @@
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const OpenAI = require('openai'); // We will use the OpenAI client, but configure it for Groq
 
-// Initialize Google Generative AI client with API key from environment variables
-let genAI; // Renaming to genAI to avoid confusion with the 'gemini' variable in some older examples
-if (process.env.GEMINI_API_KEY) {
-  genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+// Initialize Groq client (using OpenAI SDK for compatibility)
+let groq;
+if (process.env.GROQ_API_KEY && process.env.GROQ_API_BASE_URL) {
+  groq = new OpenAI({
+    apiKey: process.env.GROQ_API_KEY,
+    baseURL: process.env.GROQ_API_BASE_URL,
+  });
 } else {
-  console.warn('GEMINI_API_KEY is not configured. AI services will be limited or use fallbacks.');
+  console.warn('GROQ_API_KEY or GROQ_API_BASE_URL is not configured. AI services will be limited or use fallbacks.');
 }
 
 // Helper to check if AI is available
-const isGeminiAvailable = () => {
-  return !!genAI;
+const isGroqAvailable = () => {
+  return !!groq;
 };
 
 // --- AI-Powered Text Operations (Summarization & Drafting) ---
@@ -21,39 +24,34 @@ const isGeminiAvailable = () => {
  * @param {string} text - The input text to be summarized.
  * @param {string} [promptPrefix='Summarize the following text concisely and professionally:'] - Optional prefix for the AI prompt.
  * @returns {Promise<string>} - The summarized text.
- * @throws {Error} If the Gemini API call fails or API key is missing.
+ * @throws {Error} If the Groq API call fails or API key is missing.
  */
 const summarizeText = async (text, promptPrefix = 'Summarize the following text concisely and professionally:') => {
-  if (!isGeminiAvailable()) {
-    throw new Error('Gemini API Key is not configured. Cannot summarize.');
+  if (!isGroqAvailable()) {
+    throw new Error('Groq API is not configured. Cannot summarize.');
   }
   if (!text || text.length < 50) {
     throw new Error('Input text must be at least 50 characters for effective summarization.');
   }
 
   try {
-    // Use text-bison-001 for text generation tasks via generateContent
-    const model = genAI.getGenerativeModel({ model: "text-bison-001" });
-
-    const fullPrompt = `${promptPrefix}\n\nText to summarize:\n${text}`;
-
-    const result = await model.generateContent({ // Use generateContent
-      contents: [{ role: "user", parts: [{ text: fullPrompt }] }], // Correct format for contents
-      generationConfig: {
-        maxOutputTokens: 150,
-        temperature: 0.5,
-      },
+    const completion = await groq.chat.completions.create({
+      model: "llama3-8b-8192", // Use a Groq-supported model, e.g., "llama3-8b-8192" or "mixtral-8x7b-32768"
+      messages: [
+        { role: "system", content: "You are a helpful assistant that excels at summarizing text concisely and accurately." },
+        { role: "user", content: `${promptPrefix}\n\nText to summarize:\n${text}` },
+      ],
+      max_tokens: 150,
+      temperature: 0.5,
     });
 
-    const response = result.response;
-    return response.text().trim();
-
+    return completion.choices[0].message.content.trim();
   } catch (error) {
-    console.error('Error summarizing text with Gemini (text-bison-001):', error.message);
-    if (error.response) {
-      console.error('Gemini API Error details:', error);
+    console.error('Error summarizing text with Groq:', error.message);
+    if (error.response && error.response.data && error.response.data.error) {
+        console.error('Groq API Error details:', error.response.data.error);
     }
-    throw new Error('Failed to summarize text using AI. Please check server logs and your Gemini API key/usage limits.');
+    throw new Error('Failed to summarize text using AI. Please check server logs and your Groq API key/usage limits.');
   }
 };
 
@@ -65,11 +63,11 @@ const summarizeText = async (text, promptPrefix = 'Summarize the following text 
  * @param {string} [tone='professional'] - Optional tone for the draft (e.g., professional, friendly, urgent).
  * @param {string} [format='email'] - Optional format (e.g., email, slack message).
  * @returns {Promise<string>} - The drafted message.
- * @throws {Error} If the Gemini API call fails or API key is missing.
+ * @throws {Error} If the Groq API call fails or API key is missing.
  */
 const draftMessage = async (instruction, context = '', tone = 'professional', format = 'email') => {
-  if (!isGeminiAvailable()) {
-    throw new Error('Gemini API Key is not configured. Cannot draft message.');
+  if (!isGroqAvailable()) {
+    throw new Error('Groq API is not configured. Cannot draft message.');
   }
   if (!instruction || instruction.length < 20) {
     throw new Error('Please provide a detailed instruction (at least 20 characters) for drafting the message.');
@@ -82,25 +80,23 @@ const draftMessage = async (instruction, context = '', tone = 'professional', fo
   userPrompt += ` Ensure the draft is in a ${tone} tone and formatted as a ${format}.`;
 
   try {
-    const model = genAI.getGenerativeModel({ model: "text-bison-001" });
-
-    const result = await model.generateContent({ // Use generateContent
-      contents: [{ role: "user", parts: [{ text: userPrompt }] }], // Correct format for contents
-      generationConfig: {
-        maxOutputTokens: 300,
-        temperature: 0.7,
-      },
+    const completion = await groq.chat.completions.create({
+      model: "llama3-8b-8192", // Use a Groq-supported model
+      messages: [
+        { role: "system", content: "You are a helpful assistant that drafts clear, concise, and appropriate messages." },
+        { role: "user", content: userPrompt },
+      ],
+      max_tokens: 300,
+      temperature: 0.7,
     });
 
-    const response = result.response;
-    return response.text().trim();
-
+    return completion.choices[0].message.content.trim();
   } catch (error) {
-    console.error('Error drafting message with Gemini (text-bison-001):', error.message);
-    if (error.response) {
-      console.error('Gemini API Error details:', error);
+    console.error('Error drafting message with Groq:', error.message);
+    if (error.response && error.response.data && error.response.data.error) {
+        console.error('Groq API Error details:', error.response.data.error);
     }
-    throw new Error('Failed to draft message using AI. Please check server logs and your Gemini API key/usage limits.');
+    throw new Error('Failed to draft message using AI. Please check server logs and your Groq API key/usage limits.');
   }
 };
 
@@ -123,13 +119,11 @@ const staticMotivationalTips = [
  * @function getMotivationalTip
  * @description Provides a personalized motivational tip using AI, based on user context.
  * @param {Object} [userContext={}] - Optional, comprehensive user context including recent activities, goals, etc.
- *   Example: { userName: 'Jane', completedTasksToday: 5, activeGoals: ['Learn Python'], challenges: 'feeling overwhelmed' }
  * @returns {Promise<string>} - A motivational tip.
- * @throws {Error} If the Gemini API call fails or API key is missing.
+ * @throws {Error} If the Groq API call fails or API key is missing.
  */
 const getMotivationalTip = async (userContext = {}) => {
-  if (!isGeminiAvailable()) {
-    // Fallback to static tips if AI key is missing
+  if (!isGroqAvailable()) {
     const randomIndex = Math.floor(Math.random() * staticMotivationalTips.length);
     return staticMotivationalTips[randomIndex];
   }
@@ -147,28 +141,21 @@ Motivational Tip:`;
   }
 
   try {
-    const model = genAI.getGenerativeModel({ model: "text-bison-001" });
-
-    const result = await model.generateContent({ // Use generateContent
-      contents: [
-        { role: "user", parts: [{ text: "You are an encouraging and wise AI coach, providing concise and impactful motivational tips." }] },
-        { role: "user", parts: [{ text: promptContent }] },
+    const completion = await groq.chat.completions.create({
+      model: "llama3-8b-8192", // Use a Groq-supported model
+      messages: [
+        { role: "system", content: "You are an encouraging and wise AI coach, providing concise and impactful motivational tips." },
+        { role: "user", content: promptContent },
       ],
-      generationConfig: {
-        maxOutputTokens: 80,
-        temperature: 0.9,
-      },
+      max_tokens: 80,
+      temperature: 0.9,
     });
-
-    const response = result.response;
-    return response.text().trim();
-
+    return completion.choices[0].message.content.trim();
   } catch (error) {
-    console.error('Error getting AI motivational tip with Gemini (text-bison-001):', error.message);
-    if (error.response) {
-      console.error('Gemini API Error details:', error);
+    console.error('Error getting AI motivational tip with Groq:', error.message);
+    if (error.response && error.response.data && error.response.data.error) {
+        console.error('Groq API Error details:', error.response.data.error);
     }
-    // Fallback to static tips on AI failure
     const randomIndex = Math.floor(Math.random() * staticMotivationalTips.length);
     return staticMotivationalTips[randomIndex];
   }
@@ -180,13 +167,12 @@ Motivational Tip:`;
  * @function getPersonalizedProductivityRecommendation
  * @description Generates AI-driven productivity recommendations based on comprehensive user activity data.
  * @param {Object} comprehensiveUserData - An object containing a deep summary of user's tasks, events, goals, recent performance.
- *   Example: { recentTasks: [], upcomingEvents: [], activeGoals: [], completionRate: '70%', challenges: 'too many distractions' }
  * @returns {Promise<string>} - A string containing personalized productivity recommendations.
- * @throws {Error} If the Gemini API call fails or API key is missing.
+ * @throws {Error} If the Groq API call fails or API key is missing.
  */
 const getPersonalizedProductivityRecommendation = async (comprehensiveUserData) => {
-  if (!isGeminiAvailable()) {
-    throw new Error('Gemini API Key is not configured for productivity recommendations.');
+  if (!isGroqAvailable()) {
+    throw new Error('Groq API is not configured for productivity recommendations.');
   }
   if (!comprehensiveUserData || typeof comprehensiveUserData !== 'object' || Object.keys(comprehensiveUserData).length === 0) {
     throw new Error('Comprehensive user data is required for personalized productivity recommendations.');
@@ -200,27 +186,23 @@ ${JSON.stringify(comprehensiveUserData, null, 2)}
 Actionable Productivity Recommendations:`;
 
   try {
-    const model = genAI.getGenerativeModel({ model: "text-bison-001" });
-
-    const result = await model.generateContent({ // Use generateContent
-      contents: [
-        { role: "user", parts: [{ text: "You are an AI productivity coach providing intelligent, empathetic, and actionable advice. Structure your advice with clear points." }] },
-        { role: "user", parts: [{ text: promptContent }] },
+    const completion = await groq.chat.completions.create({
+      model: "llama3-8b-8192", // Use a Groq-supported model
+      messages: [
+        { role: "system", content: "You are an AI productivity coach providing intelligent, empathetic, and actionable advice. Structure your advice with clear points." },
+        { role: "user", content: promptContent },
       ],
-      generationConfig: {
-        maxOutputTokens: 300,
-        temperature: 0.7,
-      },
+      max_tokens: 300,
+      temperature: 0.7,
     });
-    const response = result.response;
-    return response.text().trim();
-
+    const response = completion.choices[0].message.content.trim();
+    return response;
   } catch (error) {
-    console.error('Error getting productivity recommendations from Gemini (text-bison-001):', error.message);
-    if (error.response) {
-      console.error('Gemini API Error details:', error);
+    console.error('Error getting productivity recommendations from Groq:', error.message);
+    if (error.response && error.response.data && error.response.data.error) {
+        console.error('Groq API Error details:', error.response.data.error);
     }
-    throw new Error('Failed to get AI productivity recommendations. Please check server logs and Gemini API key/usage limits.');
+    throw new Error('Failed to get AI productivity recommendations. Please check server logs and Groq API key/usage limits.');
   }
 };
 
@@ -228,13 +210,12 @@ Actionable Productivity Recommendations:`;
  * @function getPersonalizedGoalRecommendation
  * @description Generates AI-driven recommendations for goal achievement based on detailed user's goal data and progress.
  * @param {Object} detailedGoalData - An object containing a deep summary of a user's specific goal (title, progress, targetDate, related tasks, learning resources, challenges).
- *   Example: { title: 'Learn React', progress: 30, targetDate: '2025-06-01', relatedTasks: [], learningResources: [] }
  * @returns {Promise<string>} - A string containing personalized goal achievement recommendations.
- * @throws {Error} If the Gemini API call fails or API key is missing.
+ * @throws {Error} If the Groq API call fails or API key is missing.
  */
 const getPersonalizedGoalRecommendation = async (detailedGoalData) => {
-  if (!isGeminiAvailable()) {
-    throw new Error('Gemini API Key is not configured for goal recommendations.');
+  if (!isGroqAvailable()) {
+    throw new Error('Groq API is not configured for goal recommendations.');
   }
   if (!detailedGoalData || typeof detailedGoalData !== 'object' || Object.keys(detailedGoalData).length === 0) {
     throw new Error('Detailed goal data is required for personalized goal achievement recommendations.');
@@ -248,27 +229,23 @@ ${JSON.stringify(detailedGoalData, null, 2)}
 Actionable Advice for Goal Achievement:`;
 
   try {
-    const model = genAI.getGenerativeModel({ model: "text-bison-001" });
-
-    const result = await model.generateContent({ // Use generateContent
-      contents: [
-        { role: "user", parts: [{ text: "You are an AI personal growth coach providing intelligent, empathetic, and actionable advice for achieving goals. Break down complex advice into clear, numbered steps or bullet points." }] },
-        { role: "user", parts: [{ text: promptContent }] },
+    const completion = await groq.chat.completions.create({
+      model: "llama3-8b-8192", // Use a Groq-supported model
+      messages: [
+        { role: "system", content: "You are an AI personal growth coach providing intelligent, empathetic, and actionable advice for achieving goals. Break down complex advice into clear, numbered steps or bullet points." },
+        { role: "user", content: promptContent },
       ],
-      generationConfig: {
-        maxOutputTokens: 300,
-        temperature: 0.7,
-      },
+      max_tokens: 300,
+      temperature: 0.7,
     });
-    const response = result.response;
-    return response.text().trim();
-
+    const response = completion.choices[0].message.content.trim();
+    return response;
   } catch (error) {
-    console.error('Error getting goal recommendations from Gemini (text-bison-001):', error.message);
-    if (error.response) {
-      console.error('Gemini API Error details:', error);
+    console.error('Error getting goal recommendations from Groq:', error.message);
+    if (error.response && error.response.data && error.response.data.error) {
+        console.error('Groq API Error details:', error.response.data.error);
     }
-    throw new Error('Failed to get AI goal achievement recommendations. Please check server logs and Gemini API key/usage limits.');
+    throw new Error('Failed to get AI goal achievement recommendations. Please check server logs and Groq API key/usage limits.');
   }
 };
 
@@ -276,14 +253,13 @@ Actionable Advice for Goal Achievement:`;
  * @function getWellnessSuggestion
  * @description Generates AI-driven wellness suggestions based on detailed user wellness context.
  * @param {Object} detailedWellnessContext - An object containing user's recent wellness activities, schedule, current mood/stress, and requested suggestion type.
- *   Example: { currentMood: 'stressed', recentActivity: 'worked 5 hours without break', suggestionType: 'break', timezone: 'UTC' }
  * @param {string} [suggestionType='general'] - Type of suggestion needed (e.g., 'break', 'meal', 'exercise', 'mindfulness', 'hydration', 'sleep_aid').
  * @returns {Promise<string>} - A string containing a personalized wellness suggestion.
- * @throws {Error} If the Gemini API call fails or API key is missing.
+ * @throws {Error} If the Groq API call fails or API key is missing.
  */
 const getWellnessSuggestion = async (detailedWellnessContext, suggestionType = 'general') => {
-  if (!isGeminiAvailable()) {
-    throw new Error('Gemini API Key is not configured for wellness suggestions.');
+  if (!isGroqAvailable()) {
+    throw new Error('Groq API is not configured for wellness suggestions.');
   }
   if (!detailedWellnessContext || typeof detailedWellnessContext !== 'object' || Object.keys(detailedWellnessContext).length === 0) {
     throw new Error('Detailed user wellness context is required for personalized wellness suggestions.');
@@ -297,33 +273,30 @@ ${JSON.stringify(detailedWellnessContext, null, 2)}
 Wellness Suggestion:`;
 
   try {
-    const model = genAI.getGenerativeModel({ model: "text-bison-001" });
-
-    const result = await model.generateContent({ // Use generateContent
-      contents: [
-        { role: "user", parts: [{ text: "You are an AI wellness assistant providing intelligent, empathetic, and actionable suggestions for health and mental balance. Focus on practical, short tips." }] },
-        { role: "user", parts: [{ text: promptContent }] },
+    const completion = await groq.chat.completions.create({
+      model: "llama3-8b-8192", // Use a Groq-supported model
+      messages: [
+        { role: "system", content: "You are an AI wellness assistant providing intelligent, empathetic, and actionable suggestions for health and mental balance. Focus on practical, short tips." },
+        { role: "user", content: promptContent },
       ],
-      generationConfig: {
-        maxOutputTokens: 120,
-        temperature: 0.8,
-      },
+      max_tokens: 120,
+      temperature: 0.8,
     });
 
-    const response = result.response;
-    return response.text().trim();
+    const response = completion.choices[0].message.content.trim();
+    return response;
 
   } catch (error) {
-    console.error('Error getting wellness suggestion from Gemini (text-bison-001):', error.message);
-    if (error.response) {
-      console.error('Gemini API Error details:', error);
+    console.error('Error getting wellness suggestion from Groq:', error.message);
+    if (error.response && error.response.data && error.response.data.error) {
+        console.error('Groq API Error details:', error.response.data.error);
     }
-    throw new Error('Failed to get AI wellness suggestion. Please check server logs and Gemini API key/usage limits.');
+    throw new Error('Failed to get AI wellness suggestion. Please check server logs and Groq API key/usage limits.');
   }
 };
 
 
-// --- NEW: AI-Powered Learning Resource Generation ---
+// --- AI-Powered Learning Resource Generation ---
 
 /**
  * @function generateLearningResources
@@ -332,12 +305,11 @@ Wellness Suggestion:`;
  * @param {string} [typeHint='any'] - A hint for the type of resources (e.g., 'articles', 'videos', 'courses').
  * @param {string} [difficulty='beginner'] - The desired difficulty level.
  * @returns {Promise<Array<Object>>} - An array of suggested learning resource objects.
- *   Example: [{ title, description, url, type, category, source: 'AI_suggested' }]
- * @throws {Error} If the Gemini API call fails or API key is missing.
+ * @throws {Error} If the Groq API call fails or API key is missing.
  */
 const generateLearningResources = async (topic, typeHint = 'any', difficulty = 'beginner') => {
-  if (!isGeminiAvailable()) {
-    throw new Error('Gemini API Key is not configured for generating learning resources.');
+  if (!isGroqAvailable()) {
+    throw new Error('Groq API is not configured for generating learning resources.');
   }
   if (!topic || topic.length < 10) {
     throw new Error('Please provide a specific topic or goal (at least 10 characters) for generating learning resources.');
@@ -345,7 +317,6 @@ const generateLearningResources = async (topic, typeHint = 'any', difficulty = '
 
   const systemMessage = `You are an AI learning assistant. Your task is to suggest relevant learning resources for a given topic. For each suggestion, provide a concise title, a brief description, a plausible URL (it doesn't have to be real, but should look like a real, helpful resource link), the resource type, and a category. Aim for 3-5 diverse resources. Always output valid JSON.`;
 
-  // Refined prompt to be more insistent on JSON format and provide a concrete example
   const userPrompt = `Generate 3-5 learning resources for the topic: "${topic}".
   Desired resource types: ${typeHint}.
   Difficulty level: ${difficulty}.
@@ -373,60 +344,61 @@ const generateLearningResources = async (topic, typeHint = 'any', difficulty = '
   `;
 
   try {
-    const model = genAI.getGenerativeModel({ model: "text-bison-001" });
-
-    const result = await model.generateContent({ // Use generateContent
-      contents: [
-        { role: "user", parts: [{ text: systemMessage }] },
-        { role: "user", parts: [{ text: userPrompt }] },
+    const completion = await groq.chat.completions.create({
+      model: "llama3-8b-8192", // Use a Groq-supported model
+      messages: [
+        { role: "system", content: systemMessage },
+        { role: "user", content: userPrompt },
       ],
-      generationConfig: {
-        maxOutputTokens: 700,
-        temperature: 0.7,
-      },
+      max_tokens: 700,
+      temperature: 0.7,
+      response_format: { type: "json_object" }, // Groq supports this for Llama 3
     });
 
-    const response = result.response;
-    let responseText = response.text().trim();
+    const responseContent = completion.choices[0].message.content.trim();
 
-    // --- IMPROVED JSON EXTRACTION ---
-    // Attempt to extract JSON from markdown code block if present
-    const jsonMatch = responseText.match(/```json\n([\s\S]*?)\n```/);
+    // Groq's Llama 3 with response_format should ideally return clean JSON,
+    // but keep the markdown extraction as a robust fallback.
+    const jsonMatch = responseContent.match(/```json\n([\s\S]*?)\n```/);
+    let jsonString = responseContent;
     if (jsonMatch && jsonMatch[1]) {
-      responseText = jsonMatch[1].trim();
-      console.log("[Gemini AI Service] Extracted JSON from markdown block.");
+      jsonString = jsonMatch[1].trim();
+      console.log("[Groq AI Service] Extracted JSON from markdown block.");
     }
 
     let parsedResponse;
     try {
-      parsedResponse = JSON.parse(responseText);
+      parsedResponse = JSON.parse(jsonString);
     } catch (parseError) {
-      console.error('Failed to parse Gemini response as JSON (attempted extraction):', responseText, parseError);
-      throw new Error("AI did not return valid JSON. Raw response fragment: " + responseText.substring(0, 500));
+      console.error('Failed to parse Groq response as JSON (attempted extraction):', jsonString, parseError);
+      throw new Error("AI did not return valid JSON. Raw response fragment: " + jsonString.substring(0, 500));
     }
 
-    const resourceArray = parsedResponse.resources; // Still expecting a "resources" key
+    const resourceArray = parsedResponse.resources;
 
     if (!Array.isArray(resourceArray) || resourceArray.length === 0) {
-        console.error('Gemini response did not contain a valid "resources" array or it was empty:', parsedResponse);
-        throw new Error("AI did not return a valid list of resources in the expected JSON 'resources' array. Raw response fragment: " + responseText.substring(0, 500));
+        console.error('Groq response did not contain a valid "resources" array or it was empty:', parsedResponse);
+        throw new Error("AI did not return a valid list of resources in the expected JSON 'resources' array. Raw response fragment: " + jsonString.substring(0, 500));
     }
 
     return resourceArray.map(res => ({
         title: res.title || "Untitled Resource",
         description: res.description || "No description provided.",
-        url: res.url || "https://example.com/no-link", // Provide a default or empty string
+        url: res.url || "https://example.com/no-link",
         type: res.type && ['article', 'video', 'course', 'book', 'podcast', 'tool', 'other'].includes(res.type) ? res.type : 'other',
         category: res.category && ['programming', 'marketing', 'finance', 'design', 'self-improvement', 'other'].includes(res.category) ? res.category : 'other',
         source: 'AI_suggested',
     }));
 
   } catch (error) {
-    console.error('Error generating learning resources with Gemini (text-bison-001):', error.message);
-    if (error.response) {
-      console.error('Gemini API Error details:', error);
+    console.error('Error generating learning resources with Groq (llama3-8b-8192):', error.message);
+    // Groq errors are typically similar to OpenAI errors, check structure
+    if (error.response && error.response.data && error.response.data.error) {
+        console.error('Groq API Error details:', error.response.data.error);
+    } else {
+        console.error('Groq API Error details (full object):', error);
     }
-    throw new Error('Failed to generate AI learning resources. Please check server logs and Gemini API key/usage limits.');
+    throw new Error('Failed to generate AI learning resources. Please check server logs and your Groq API key/usage limits.');
   }
 };
 
