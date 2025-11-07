@@ -1,4 +1,3 @@
-
 const express = require('express');
 const {
   getBudgets,
@@ -9,9 +8,9 @@ const {
 } = require('../controllers/budgetController');
 const { protect } = require('../middleware/authMiddleware');
 const {
-
     validateCreateBudget,
-    validateUpdateBudget
+    validateUpdateBudget,
+    validateIdParam // --- ADDED: Import validateIdParam ---
 } = require('../middleware/validationMiddleware');
 const router = express.Router();
 
@@ -244,9 +243,8 @@ router.route('/')
  *         $ref: '#/components/responses/ServerError'
  */
 router.route('/:id')
-    .get(getBudget)
-    .put(validateUpdateBudget, updateBudget)
-    .delete(deleteBudget);
+    .get(validateIdParam, getBudget) // --- ADDED validateIdParam ---
+    .put(validateIdParam, validateUpdateBudget, updateBudget) // --- ADDED validateIdParam ---
+    .delete(validateIdParam, deleteBudget); // --- ADDED validateIdParam ---
 
 module.exports = router;
-

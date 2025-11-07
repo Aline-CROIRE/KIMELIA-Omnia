@@ -77,7 +77,7 @@ const mongoose = require('mongoose');
  *           description: The timestamp when the resource was last updated.
  *           readOnly: true
  */
-const learningResourceSchema = new mongoose.Schema(
+const learningResourceSchema = new mongoose.Schema( // --- Ensure `new mongoose.Schema` ---
   {
     user: {
       type: mongoose.Schema.Types.ObjectId,
@@ -136,4 +136,3 @@ const learningResourceSchema = new mongoose.Schema(
 );
 
 module.exports = mongoose.model('LearningResource', learningResourceSchema);
-

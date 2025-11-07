@@ -7,9 +7,10 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import HomeScreen from '../screens/App/HomeScreen';
 import PlannerStackScreen from './PlannerStack';
 import CommunicatorStackScreen from './CommunicatorStack';
-import CoachStackScreen from './CoachStack'; // --- NEW IMPORT ---
+import CoachStackScreen from './CoachStack'; // CoachStack now includes LR screens
+// import WorkspaceStackScreen from './WorkspaceStack'; // Still commented out for now
 
-import { COLORS, FONTS } from '../constants'; // Import FONTS for label style
+import { COLORS, FONTS } from '../constants';
 
 const Tab = createBottomTabNavigator();
 
@@ -20,7 +21,9 @@ const getTabBarVisibility = (route) => {
   const hideOnScreens = [
     'TaskForm', 'TaskDetail', 'EventForm', 'EventDetail',
     'MessageForm', 'MessageDetail',
-    'GoalForm', 'GoalDetail', // --- NEW: Add Goal detail/form screens ---
+    'GoalForm', 'GoalDetail',
+    'LearningResourceForm', 'LearningResourceDetail', // --- NEW: Add Learning Resource detail/form screens ---
+    // 'ProjectForm', 'ProjectDetail', // Still commented out for now
   ];
   if (hideOnScreens.includes(routeName)) {
     return 'none'; // This hides the tab bar
@@ -45,7 +48,7 @@ const MainTabNavigator = () => {
         },
         tabBarLabelStyle: {
           fontSize: 12,
-          fontFamily: FONTS.secondary, // Use secondary font for tab labels
+          fontFamily: FONTS.secondary,
         },
       })}
     >
@@ -82,19 +85,19 @@ const MainTabNavigator = () => {
         })}
       />
       <Tab.Screen
-        name="CoachTab" // --- NEW TAB SCREEN ---
-        component={CoachStackScreen} // Renders the CoachStackNavigator
+        name="CoachTab"
+        component={CoachStackScreen}
         options={({ route }) => ({
           title: 'Coach',
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="run" color={color} size={size} />
           ),
-          tabBarStyle: { display: getTabBarVisibility(route) }, // Apply dynamic visibility
+          tabBarStyle: { display: getTabBarVisibility(route) },
         })}
       />
       <Tab.Screen
         name="WorkspaceTab"
-        component={HomeScreen} // Placeholder for Workspace module's stack
+        component={HomeScreen} // Placeholder for Workspace module's stack (still)
         options={{
           title: 'Workspace',
           tabBarIcon: ({ color, size }) => (

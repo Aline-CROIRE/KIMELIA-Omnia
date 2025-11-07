@@ -1,3 +1,4 @@
+
 const express = require('express');
 const {
   getLearningResources,
@@ -9,9 +10,9 @@ const {
 } = require('../controllers/learningResourceController');
 const { protect } = require('../middleware/authMiddleware');
 const {
-    
     validateCreateLearningResource,
-    validateUpdateLearningResource
+    validateUpdateLearningResource,
+    validateIdParam // --- ADDED: Import validateIdParam ---
 } = require('../middleware/validationMiddleware'); // Path to your validation middleware
 
 const router = express.Router();
@@ -199,11 +200,9 @@ router.route('/')
  *       500: { $ref: '#/components/responses/ServerError' }
  */
 router.route('/:id')
-    // No Joi validation middleware for ':id' parameter here,
-    // relying on controller-level Types.ObjectId.isValid checks
-    .get(getLearningResource)
-    .put(validateUpdateLearningResource, updateLearningResource)
-    .delete(deleteLearningResource);
+    .get(validateIdParam, getLearningResource) // --- ADDED validateIdParam ---
+    .put(validateIdParam, validateUpdateLearningResource, updateLearningResource) // --- ADDED validateIdParam ---
+    .delete(validateIdParam, deleteLearningResource); // --- ADDED validateIdParam ---
 
 /**
  * @swagger

@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState, useCallback } from 'react';
-import { Alert, View, Text, StyleSheet } from 'react-native'; // Import Text
+import { Alert, View, Text, StyleSheet } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import {
   GradientBackground,
@@ -33,6 +33,7 @@ const HomeScreen = ({ navigation }) => {
     totalGoals: 0,
     totalLearningResources: 0,
     totalWellnessRecords: 0,
+    // totalProjects: 0, // Still commented out for now
   });
   const [loadingDashboard, setLoadingDashboard] = useState(true);
   const [errorDashboard, setErrorDashboard] = useState('');
@@ -62,13 +63,17 @@ const HomeScreen = ({ navigation }) => {
       const goalsResponse = await apiClient.get('/goals');
       const totalGoalsCount = goalsResponse.data.data.length;
 
-      // 6. Fetch Learning Resources and count total
+      // 6. --- RE-ENABLED: Fetch Learning Resources and count total ---
       const learningResourcesResponse = await apiClient.get('/learning-resources');
       const totalLearningResourcesCount = learningResourcesResponse.data.data.length;
 
       // 7. Fetch Wellness Records and count total
       const wellnessRecordsResponse = await apiClient.get('/wellness-records');
       const totalWellnessRecordsCount = wellnessRecordsResponse.data.data.length;
+
+      // 8. Projects (still commented out)
+      // const projectsResponse = await apiClient.get('/projects');
+      // const totalProjectsCount = projectsResponse.data.data.length;
 
       setDashboardData({
         pendingTasks: pendingTasksCount,
@@ -77,6 +82,7 @@ const HomeScreen = ({ navigation }) => {
         totalGoals: totalGoalsCount,
         totalLearningResources: totalLearningResourcesCount,
         totalWellnessRecords: totalWellnessRecordsCount,
+        // totalProjects: totalProjectsCount, // Still commented out
       });
 
     } catch (e) {
@@ -104,62 +110,70 @@ const HomeScreen = ({ navigation }) => {
           {loadingDashboard ? (
             <LoadingIndicator />
           ) : errorDashboard ? (
-            <ErrorText>{errorDashboard}</ErrorText>
+            <ErrorText><Text>{errorDashboard}</Text></ErrorText>
           ) : (
             <>
               {/* Welcome Header */}
               <View style={styles.headerContainer}>
                 <Title style={styles.welcomeTitle}>
-                  <Text>Hello, </Text>{/* Wrapped static text */}
-                  {profileData?.name?.split(' ')[0] || user?.name?.split(' ')[0] || 'Omnia User'}!
+                  <Text>Hello, </Text>
+                  <Text>{profileData?.name?.split(' ')[0] || user?.name?.split(' ')[0] || 'Omnia User'}</Text>!
                 </Title>
                 <SubTitle style={styles.welcomeSubTitle}>
-                  <Text>Your World, Organized Intelligently.</Text> {/* Wrapped static text */}
+                  <Text>Your World, Organized Intelligently.</Text>
                 </SubTitle>
               </View>
 
               {/* Quick Overview Cards */}
-              <SubTitle style={styles.sectionTitle}>Your Quick Overview</SubTitle>
+              <SubTitle style={styles.sectionTitle}><Text>Your Quick Overview</Text></SubTitle>
               <View style={styles.quickStatsGrid}>
                 <Card style={styles.statCard} onPress={() => navigation.navigate('PlannerTab', { screen: 'TaskList' })}>
                   <MaterialCommunityIcons name="clipboard-list-outline" size={30} color={COLORS.chocolateBrown} />
-                  <CardTitle style={styles.statCardValue}>{dashboardData.pendingTasks}</CardTitle>
-                  <CardDescription style={styles.statCardLabel}>Pending Tasks</CardDescription>
+                  <CardTitle style={styles.statCardValue}><Text>{dashboardData.pendingTasks}</Text></CardTitle>
+                  <CardDescription style={styles.statCardLabel}><Text>Pending Tasks</Text></CardDescription>
                 </Card>
 
                 <Card style={styles.statCard} onPress={() => navigation.navigate('PlannerTab', { screen: 'EventList' })}>
                   <MaterialCommunityIcons name="calendar-check-outline" size={30} color={COLORS.copper} />
-                  <CardTitle style={styles.statCardValue}>{dashboardData.upcomingEvents}</CardTitle>
-                  <CardDescription style={styles.statCardLabel}>Upcoming Events</CardDescription>
+                  <CardTitle style={styles.statCardValue}><Text>{dashboardData.upcomingEvents}</Text></CardTitle>
+                  <CardDescription style={styles.statCardLabel}><Text>Upcoming Events</Text></CardDescription>
                 </Card>
 
                 <Card style={styles.statCard} onPress={() => navigation.navigate('CommunicatorTab', { screen: 'MessageList' })}>
                   <MaterialCommunityIcons name="message-text-outline" size={30} color={COLORS.gold} />
-                  <CardTitle style={styles.statCardValue}>{dashboardData.unreadMessages}</CardTitle>
-                  <CardDescription style={styles.statCardLabel}>Unread Messages</CardDescription>
+                  <CardTitle style={styles.statCardValue}><Text>{dashboardData.unreadMessages}</Text></CardTitle>
+                  <CardDescription style={styles.statCardLabel}><Text>Unread Messages</Text></CardDescription>
                 </Card>
 
                 <Card style={styles.statCard} onPress={() => navigation.navigate('CoachTab', { screen: 'GoalList' })}>
                   <MaterialCommunityIcons name="target-variant" size={30} color={COLORS.tan} />
-                  <CardTitle style={styles.statCardValue}>{dashboardData.totalGoals}</CardTitle>
-                  <CardDescription style={styles.statCardLabel}>Total Goals</CardDescription>
+                  <CardTitle style={styles.statCardValue}><Text>{dashboardData.totalGoals}</Text></CardTitle>
+                  <CardDescription style={styles.statCardLabel}><Text>Total Goals</Text></CardDescription>
                 </Card>
 
-                <Card style={styles.statCard} onPress={() => Alert.alert('Navigate to Learning Resources', 'Learning Resources module not yet implemented.')}>
+                {/* --- RE-ENABLED: Learning Resources Card --- */}
+                <Card style={styles.statCard} onPress={() => navigation.navigate('CoachTab', { screen: 'LearningResourceList' })}>
                   <MaterialCommunityIcons name="book-open-variant" size={30} color={COLORS.chocolateBrown} />
-                  <CardTitle style={styles.statCardValue}>{dashboardData.totalLearningResources}</CardTitle>
-                  <CardDescription style={styles.statCardLabel}>Learning Resources</CardDescription>
+                  <CardTitle style={styles.statCardValue}><Text>{dashboardData.totalLearningResources}</Text></CardTitle>
+                  <CardDescription style={styles.statCardLabel}><Text>Learning Resources</Text></CardDescription>
                 </Card>
+
+                {/* Project Card (still commented out) */}
+                {/* <Card style={styles.statCard} onPress={() => navigation.navigate('WorkspaceTab', { screen: 'ProjectList' })}>
+                  <MaterialCommunityIcons name="briefcase-outline" size={30} color={COLORS.chocolateBrown} />
+                  <CardTitle style={styles.statCardValue}>{dashboardData.totalProjects}</CardTitle>
+                  <CardDescription style={styles.statCardLabel}>Total Projects</CardDescription>
+                </Card> */}
 
                 <Card style={styles.statCard} onPress={() => Alert.alert('Navigate to Wellness', 'Wellness module not yet implemented.')}>
                   <MaterialCommunityIcons name="heart-pulse" size={30} color={COLORS.copper} />
-                  <CardTitle style={styles.statCardValue}>{dashboardData.totalWellnessRecords}</CardTitle>
-                  <CardDescription style={styles.statCardLabel}>Wellness Records</CardDescription>
+                  <CardTitle style={styles.statCardValue}><Text>{dashboardData.totalWellnessRecords}</Text></CardTitle>
+                  <CardDescription style={styles.statCardLabel}><Text>Wellness Records</Text></CardDescription>
                 </Card>
               </View>
 
               {/* Quick Action Buttons */}
-              <SubTitle style={styles.sectionTitle}>Quick Actions</SubTitle>
+              <SubTitle style={styles.sectionTitle}><Text>Quick Actions</Text></SubTitle>
               <View style={styles.quickActionsGroup}>
                 <GradientButton onPress={() => navigation.navigate('PlannerTab', { screen: 'TaskForm' })} style={styles.actionButton}>
                   <GradientButtonBackground colors={GRADIENTS.primaryButton}>
@@ -196,6 +210,27 @@ const HomeScreen = ({ navigation }) => {
                     </Row>
                   </GradientButtonBackground>
                 </GradientButton>
+
+                {/* --- RE-ENABLED: Add Learning Resource Quick Action --- */}
+                <GradientButton onPress={() => navigation.navigate('CoachTab', { screen: 'LearningResourceForm' })} style={styles.actionButton}>
+                  <GradientButtonBackground colors={['#7E6E5C', '#6A5B4A']}>
+                    <Row style={styles.actionButtonContent}>
+                      <MaterialCommunityIcons name="book-plus-outline" size={20} color={COLORS.white} />
+                      <ButtonText style={styles.actionButtonText}>Add Learning Resource</ButtonText>
+                    </Row>
+                  </GradientButtonBackground>
+                </GradientButton>
+
+                {/* Project Quick Action (still commented out) */}
+                {/* <GradientButton onPress={() => navigation.navigate('WorkspaceTab', { screen: 'ProjectForm' })} style={styles.actionButton}>
+                  <GradientButtonBackground colors={['#6d4b36', '#8e6c53']}>
+                    <Row style={styles.actionButtonContent}>
+                      <MaterialCommunityIcons name="plus-box-outline" size={20} color={COLORS.white} />
+                      <ButtonText style={styles.actionButtonText}>Create New Project</ButtonText>
+                    </Row>
+                  </GradientButtonBackground>
+                </GradientButton> */}
+
               </View>
 
               <GradientButton onPress={logout} style={styles.logoutButton}>

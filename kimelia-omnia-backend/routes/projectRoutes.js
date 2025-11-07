@@ -1,3 +1,4 @@
+
 const express = require('express');
 const {
   getProjects,
@@ -8,12 +9,12 @@ const {
   addProjectMember,
   removeProjectMember,
 } = require('../controllers/projectController');
-const { protect } = require('../middleware/authMiddleware'); // Assuming 'authorizeRoles' is no longer used directly here
+const { protect } = require('../middleware/authMiddleware');
 const {
-    
     validateCreateProject,
     validateUpdateProject,
-    validateAddRemoveMember, // For adding/removing members
+    validateAddRemoveMember,
+    validateIdParam // --- ADDED: Import validateIdParam ---
 } = require('../middleware/validationMiddleware');
 
 const router = express.Router();
@@ -213,11 +214,9 @@ router.route('/')
  *       500: { $ref: '#/components/responses/ServerError' }
  */
 router.route('/:id')
-    // No Joi validation middleware for ':id' parameter here,
-    // relying on controller-level Types.ObjectId.isValid checks
-    .get(getProject)
-    .put(validateUpdateProject, updateProject)
-    .delete(deleteProject);
+    .get(validateIdParam, getProject) // --- ADDED validateIdParam ---
+    .put(validateIdParam, validateUpdateProject, updateProject) // --- ADDED validateIdParam ---
+    .delete(validateIdParam, deleteProject); // --- ADDED validateIdParam ---
 
 /**
  * @swagger
@@ -300,7 +299,7 @@ router.route('/:id')
  *       500: { $ref: '#/components/responses/ServerError' }
  */
 router.route('/:id/members')
-    .post(validateAddRemoveMember, addProjectMember)
-    .delete(validateAddRemoveMember, removeProjectMember); // Use DELETE with body for memberId
+    .post(validateIdParam, validateAddRemoveMember, addProjectMember) // --- ADDED validateIdParam ---
+    .delete(validateIdParam, validateAddRemoveMember, removeProjectMember); // --- ADDED validateIdParam ---
 
 module.exports = router;

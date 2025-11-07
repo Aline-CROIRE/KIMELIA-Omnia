@@ -1,3 +1,4 @@
+
 const express = require('express');
 const {
   getExpenses,
@@ -8,9 +9,9 @@ const {
 } = require('../controllers/expenseController');
 const { protect } = require('../middleware/authMiddleware');
 const {
-  
     validateCreateExpense,
-    validateUpdateExpense
+    validateUpdateExpense,
+    validateIdParam // --- ADDED: Import validateIdParam ---
 } = require('../middleware/validationMiddleware'); // Path to your validation middleware
 const router = express.Router();
 
@@ -57,7 +58,7 @@ router.use(protect);
  *           format: date-time
  *         required: false
  *         description: Optional. End date (ISO 8601) to filter expenses occurring before or on this date.
- *         example: 2024-11-30T23:59:59.000Z
+ *         example: 2024-11-30T23:59:59.999Z
  *       - in: query
  *         name: tag
  *         schema:
@@ -248,10 +249,8 @@ router.route('/')
  *         $ref: '#/components/responses/ServerError'
  */
 router.route('/:id')
-    // No Joi validation middleware for ':id' parameter here,
-    // relying on controller-level Types.ObjectId.isValid checks
-    .get(getExpense)
-    .put(validateUpdateExpense, updateExpense)
-    .delete(deleteExpense);
+    .get(validateIdParam, getExpense) // --- ADDED validateIdParam ---
+    .put(validateIdParam, validateUpdateExpense, updateExpense) // --- ADDED validateIdParam ---
+    .delete(validateIdParam, deleteExpense); // --- ADDED validateIdParam ---
 
 module.exports = router;

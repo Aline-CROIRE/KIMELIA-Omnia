@@ -1,3 +1,4 @@
+
 const express = require('express');
 const {
   getTasks,
@@ -8,9 +9,9 @@ const {
 } = require('../controllers/taskController');
 const { protect } = require('../middleware/authMiddleware');
 const {
-   
     validateCreateTask,
-    validateUpdateTask
+    validateUpdateTask,
+    validateIdParam // --- ADDED: Import validateIdParam ---
 } = require('../middleware/validationMiddleware');
 const router = express.Router();
 
@@ -271,9 +272,8 @@ router.route('/')
  *         $ref: '#/components/responses/ServerError'
  */
 router.route('/:id')
-  
-    .get(getTask) 
-    .put(validateUpdateTask, updateTask) 
-    .delete(deleteTask); 
+    .get(validateIdParam, getTask) // --- ADDED validateIdParam ---
+    .put(validateIdParam, validateUpdateTask, updateTask) // --- ADDED validateIdParam ---
+    .delete(validateIdParam, deleteTask); // --- ADDED validateIdParam ---
 
 module.exports = router;
