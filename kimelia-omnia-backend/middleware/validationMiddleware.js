@@ -9,7 +9,9 @@ const JoiObjectId = Joi.extend((joi) => ({
     'objectId.invalid': '{{#label}} must be a valid MongoDB ObjectId',
   },
   validate(value, helpers) {
+    // --- IMPORTANT DEBUG LOGS ---
     console.log(`[JoiObjectId.validate Debug] Param Value: '${value}', Type: ${typeof value}`);
+    // --- END IMPORTANT DEBUG LOGS ---
     if (!Types.ObjectId.isValid(value)) {
       return { value, errors: helpers.error('objectId.invalid') };
     }
@@ -61,7 +63,6 @@ const adminUpdateUserSchema = Joi.object({
     theme: Joi.string().valid('light', 'dark', 'system').optional(),
     timezone: Joi.string().optional(),
   }).optional(),
-  // Add other fields an admin might update, e.g., status, etc.
 });
 
 
@@ -90,12 +91,11 @@ const updateTaskSchema = Joi.object({
   description: Joi.string().max(1000).optional().allow(''),
   priority: Joi.string().valid('low', 'medium', 'high', 'urgent').optional(),
   status: Joi.string().valid('pending', 'in-progress', 'completed', 'on_hold', 'cancelled').optional(),
-  dueDate: dateSchema.min(Joi.ref('$now')).optional().allow(null), // Can update to a future date
+  dueDate: dateSchema.min(Joi.ref('$now')).optional().allow(null),
   tags: Joi.array().items(Joi.string().trim()).optional(),
   reminders: Joi.array().items(taskReminderSchema).optional(),
   relatedGoal: JoiObjectId.objectId().optional().allow(null),
-}).min(1); // At least one field is required for update
-
+}).min(1);
 
 // --- Event Schemas ---
 const eventSchema = Joi.object({
@@ -106,7 +106,7 @@ const eventSchema = Joi.object({
   location: Joi.string().max(300).optional().allow(''),
   category: Joi.string().valid('meeting', 'appointment', 'personal', 'work', 'other').default('other').optional(),
   tags: Joi.array().items(Joi.string().trim()).optional(),
-  attendees: Joi.array().items(Joi.string().email()).optional(), // Array of emails
+  attendees: Joi.array().items(Joi.string().email()).optional(),
   isAllDay: Joi.boolean().default(false).optional(),
   recurrence: Joi.string().valid('never', 'daily', 'weekly', 'monthly', 'yearly').default('never').optional(),
   relatedProject: JoiObjectId.objectId().optional().allow(null),
@@ -129,8 +129,8 @@ const updateEventSchema = Joi.object({
 
 // --- Message Schemas ---
 const messageSchema = Joi.object({
-  sender: JoiObjectId.objectId().required(), // Assuming internal sender ID
-  recipient: JoiObjectId.objectId().required(), // Assuming internal recipient ID
+  sender: JoiObjectId.objectId().required(),
+  recipient: JoiObjectId.objectId().required(),
   subject: Joi.string().min(1).max(200).required(),
   body: Joi.string().min(1).optional().allow(''),
   type: Joi.string().valid('email', 'chat', 'notification').default('chat').optional(),
@@ -401,7 +401,7 @@ const validate = (schema, property = 'body') => (req, res, next) => {
 // --- EXPORTS ---
 module.exports = {
   // Validate a generic ID in params - use this specifically for routes needing ID validation
-  validateIdParam: validate(paramIdSchema, 'params'), // Renamed to clarify its purpose for params
+  validateIdParam: validate(paramIdSchema, 'params'),
 
   validateRegister: validate(registerSchema),
   validateLogin: validate(loginSchema),
