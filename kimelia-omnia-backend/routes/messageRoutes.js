@@ -1,3 +1,4 @@
+
 const express = require('express');
 const {
   getMessages,
@@ -9,6 +10,14 @@ const {
   generateDraft,
 } = require('../controllers/messageController');
 const { protect } = require('../middleware/authMiddleware');
+const {
+    validateIdParam, // --- ADDED: Import validateIdParam ---
+    // Assuming you have message-specific validation middleware
+    validateCreateMessage,
+    validateUpdateMessage,
+    validateSummarizeContent,
+    validateGenerateDraft
+} = require('../middleware/validationMiddleware');
 const router = express.Router();
 
 /**
@@ -122,7 +131,9 @@ router.use(protect);
  *       500:
  *         $ref: '#/components/responses/ServerError'
  */
-router.route('/').get(getMessages).post(createMessage);
+router.route('/')
+    .get(getMessages)
+    .post(validateCreateMessage, createMessage);
 
 /**
  * @swagger
@@ -240,7 +251,10 @@ router.route('/').get(getMessages).post(createMessage);
  *       500:
  *         $ref: '#/components/responses/ServerError'
  */
-router.route('/:id').get(getMessage).put(updateMessage).delete(deleteMessage);
+router.route('/:id')
+    .get(validateIdParam, getMessage) // --- ADDED validateIdParam ---
+    .put(validateIdParam, validateUpdateMessage, updateMessage) // --- ADDED validateIdParam ---
+    .delete(validateIdParam, deleteMessage); // --- ADDED validateIdParam ---
 
 /**
  * @swagger
@@ -290,7 +304,7 @@ router.route('/:id').get(getMessage).put(updateMessage).delete(deleteMessage);
  *       500:
  *         $ref: '#/components/responses/ServerError'
  */
-router.post('/ai/summarize', protect, summarizeContent); // Added protect middleware
+router.post('/ai/summarize', protect, validateSummarizeContent, summarizeContent); // --- ADDED validateSummarizeContent ---
 
 /**
  * @swagger
@@ -352,7 +366,7 @@ router.post('/ai/summarize', protect, summarizeContent); // Added protect middle
  *       500:
  *         $ref: '#/components/responses/ServerError'
  */
-router.post('/ai/draft', protect, generateDraft); // Added protect middleware
+router.post('/ai/draft', protect, validateGenerateDraft, generateDraft); // --- ADDED validateGenerateDraft ---
 
 
 module.exports = router;

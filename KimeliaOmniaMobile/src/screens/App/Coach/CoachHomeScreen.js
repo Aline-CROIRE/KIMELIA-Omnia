@@ -34,8 +34,8 @@ const CoachHomeScreen = ({ navigation }) => {
           </ModuleCardBackground>
         </ModuleCard>
 
-        {/* Learning Resources Module Card (Placeholder for later implementation) */}
-        <ModuleCard onPress={() => console.log('Navigate to Learning Resources')} style={styles.moduleCard}>
+        {/* Learning Resources Module Card */}
+        <ModuleCard onPress={() => navigation.navigate('LearningResourceList')} style={styles.moduleCard}> {/* --- UPDATED NAVIGATION --- */}
           <ModuleCardBackground colors={GRADIENTS.goldAccent}>
             <MaterialCommunityIcons name="book-open-variant" size={50} color={COLORS.white} />
             <ModuleCardContent>

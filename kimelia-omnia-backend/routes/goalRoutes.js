@@ -1,3 +1,4 @@
+
 const express = require('express');
 const {
   getGoals,
@@ -8,9 +9,9 @@ const {
 } = require('../controllers/goalController');
 const { protect } = require('../middleware/authMiddleware');
 const {
-   
     validateCreateGoal,
-    validateUpdateGoal
+    validateUpdateGoal,
+    validateIdParam // --- ADDED: Import validateIdParam ---
 } = require('../middleware/validationMiddleware');
 const router = express.Router();
 
@@ -247,10 +248,8 @@ router.route('/')
  *         $ref: '#/components/responses/ServerError'
  */
 router.route('/:id')
-    // No Joi validation middleware for ':id' parameter here,
-    // relying on controller-level Types.ObjectId.isValid checks
-    .get(getGoal)
-    .put(validateUpdateGoal, updateGoal)
-    .delete(deleteGoal);
+    .get(validateIdParam, getGoal) // --- ADDED validateIdParam ---
+    .put(validateIdParam, validateUpdateGoal, updateGoal) // --- ADDED validateIdParam ---
+    .delete(validateIdParam, deleteGoal); // --- ADDED validateIdParam ---
 
 module.exports = router;

@@ -9,10 +9,10 @@ const {
 } = require('../controllers/wellnessController');
 const { protect } = require('../middleware/authMiddleware');
 const {
- 
     validateCreateWellnessRecord,
     validateUpdateWellnessRecord,
-    validateWellnessSuggestion
+    validateWellnessSuggestion,
+    validateIdParam // --- ADDED: Import validateIdParam ---
 } = require('../middleware/validationMiddleware');
 const router = express.Router();
 
@@ -31,7 +31,7 @@ router.use(protect);
  * /wellness-records:
  *   get:
  *     summary: Retrieve all wellness records for the authenticated user.
- *     description: Fetches a list of all wellness activities (breaks, meals, exercise, mindfulness, etc.) logged by the current user. Supports filtering by type and date range.
+ *     description: Fetches a list of all wellness activities (breaks, meals, exercise, mindfulness, sleep, water_intake, custom) logged by the current user. Supports filtering by type and date range.
  *     tags: [Wellness (Omnia Wellness)]
  *     security:
  *       - bearerAuth: []
@@ -59,7 +59,7 @@ router.use(protect);
  *           format: date-time
  *         required: false
  *         description: Optional. End date (ISO 8601) to filter records occurring before or on this date.
- *         example: 2024-11-30T23:59:59.000Z
+ *         example: 2024-11-30T23:59:59.999Z
  *     responses:
  *       200:
  *         description: A list of wellness records.
@@ -240,9 +240,9 @@ router.route('/wellness-records')
  *         $ref: '#/components/responses/ServerError'
  */
 router.route('/wellness-records/:id')
-    .get(getWellnessRecord)
-    .put( validateUpdateWellnessRecord, updateWellnessRecord)
-    .delete(deleteWellnessRecord);
+    .get(validateIdParam, getWellnessRecord) // --- ADDED validateIdParam ---
+    .put(validateIdParam, validateUpdateWellnessRecord, updateWellnessRecord) // --- ADDED validateIdParam ---
+    .delete(validateIdParam, deleteWellnessRecord); // --- ADDED validateIdParam ---
 
 /**
  * @swagger

@@ -1,3 +1,4 @@
+
 const express = require('express');
 const {
   getEvents,
@@ -8,9 +9,9 @@ const {
 } = require('../controllers/eventController');
 const { protect } = require('../middleware/authMiddleware');
 const {
-    
     validateCreateEvent,
-    validateUpdateEvent
+    validateUpdateEvent,
+    validateIdParam // --- ADDED: Import validateIdParam ---
 } = require('../middleware/validationMiddleware');
 const router = express.Router();
 
@@ -49,7 +50,7 @@ router.use(protect);
  *           format: date-time
  *         required: false
  *         description: Optional. End date (ISO 8601) to filter events occurring before or on this date.
- *         example: 2024-11-30T23:59:59.000Z
+ *         example: 2024-11-30T23:59:59.999Z
  *     responses:
  *       200:
  *         description: A list of events.
@@ -242,9 +243,8 @@ router.route('/')
  *         $ref: '#/components/responses/ServerError'
  */
 router.route('/:id')
-
-    .get(getEvent) 
-    .put(validateUpdateEvent, updateEvent) 
-    .delete(deleteEvent); 
+    .get(validateIdParam, getEvent) // --- ADDED validateIdParam ---
+    .put(validateIdParam, validateUpdateEvent, updateEvent) // --- ADDED validateIdParam ---
+    .delete(validateIdParam, deleteEvent); // --- ADDED validateIdParam ---
 
 module.exports = router;

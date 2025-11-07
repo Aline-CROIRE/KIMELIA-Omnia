@@ -1,6 +1,5 @@
-
 import React from 'react';
-import { View, StyleSheet } from 'react-native'; // Import StyleSheet for local styles
+import { View, StyleSheet, Text } from 'react-native'; // Import StyleSheet for local styles and Text
 import {
   GradientBackground,
   Title,
@@ -26,11 +25,11 @@ const WelcomeScreen = ({ navigation }) => {
           
           {/* Main Title & Tagline */}
           <Title style={styles.mainTitle}>
-            Your World, Organized Intelligently.
+            <Text>Your World, Organized Intelligently.</Text>
           </Title>
           
           <SubTitle style={styles.tagline}>
-            AI-powered productivity for life and work.
+            <Text>AI-powered productivity for life and work.</Text>
           </SubTitle>
 
           {/* Call-to-Action Buttons */}

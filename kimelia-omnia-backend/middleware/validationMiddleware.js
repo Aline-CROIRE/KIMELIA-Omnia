@@ -4,11 +4,12 @@ const { Types } = require('mongoose');
 // Custom Joi extension for ObjectId validation
 const JoiObjectId = Joi.extend((joi) => ({
   type: 'objectId',
-  base: joi.string(),
+  base: joi.string(), // CRITICAL: Keep base as joi.string() to prevent "Cannot call class as a function" with Joi itself
   messages: {
     'objectId.invalid': '{{#label}} must be a valid MongoDB ObjectId',
   },
   validate(value, helpers) {
+    console.log(`[JoiObjectId.validate Debug] Param Value: '${value}', Type: ${typeof value}`);
     if (!Types.ObjectId.isValid(value)) {
       return { value, errors: helpers.error('objectId.invalid') };
     }
@@ -17,20 +18,22 @@ const JoiObjectId = Joi.extend((joi) => ({
 }));
 
 // --- Common Schemas ---
-const idSchema = JoiObjectId.objectId().hex().length(24).required(); // Keep for use in request bodies
+const paramIdSchema = Joi.object({
+  id: JoiObjectId.objectId().hex().length(24).required()
+});
+
 const dateSchema = Joi.date().iso(); // ISO 8601 date format
 
-// --- Auth Schemas ---
 const registerSchema = Joi.object({
   name: Joi.string().min(2).max(50).required(),
   email: Joi.string().email().required(),
   password: Joi.string().min(6).required(),
-  role: Joi.string().valid('individual', 'student', 'startup', 'admin').default('individual').optional(),
+  role: Joi.string().valid('individual', 'student', 'startup').optional(),
 });
 
 const loginSchema = Joi.object({
   email: Joi.string().email().required(),
-  password: Joi.string().min(6).required(),
+  password: Joi.string().required(),
 });
 
 const verifyEmailSchema = Joi.object({
@@ -42,57 +45,27 @@ const updateUserProfileSchema = Joi.object({
   email: Joi.string().email().optional(),
   password: Joi.string().min(6).optional(),
   role: Joi.string().valid('individual', 'student', 'startup').optional(),
-  phoneNumber: Joi.string().pattern(/^(\+|00)[1-9]\d{1,14}$/).optional().messages({'string.pattern.base': 'Phone number must be a valid international format (e.g., +12345678900)'}),
   settings: Joi.object({
     theme: Joi.string().valid('light', 'dark', 'system').optional(),
     timezone: Joi.string().optional(),
-  }).optional().unknown(true),
-  googleCalendar: Joi.object({
-      calendarId: Joi.string().optional(),
-  }).optional().unknown(true),
-  gmail: Joi.object({
-      // User can't directly set connected/lastSync/historyId, these are managed by the integration service
-  }).optional().unknown(true),
-  slack: Joi.object({
-      teamId: Joi.string().optional(),
-  }).optional().unknown(true),
+  }).optional(),
 });
 
 const adminUpdateUserSchema = Joi.object({
-    name: Joi.string().min(2).max(50).optional(),
-    email: Joi.string().email().optional(),
-    role: Joi.string().valid('individual', 'student', 'startup', 'admin').optional(),
-    isVerified: Joi.boolean().optional(),
-    phoneNumber: Joi.string().pattern(/^(\+|00)[1-9]\d{1,14}$/).optional().messages({'string.pattern.base': 'Phone number must be a valid international format (e.g., +12345678900)'}),
-    settings: Joi.object({
-        theme: Joi.string().valid('light', 'dark', 'system').optional(),
-        timezone: Joi.string().optional(),
-    }).optional().unknown(true),
-    googleCalendar: Joi.object({
-        accessToken: Joi.string().optional(),
-        refreshToken: Joi.string().optional(),
-        calendarId: Joi.string().optional(),
-        lastSync: dateSchema.optional(),
-    }).optional().unknown(true),
-    gmail: Joi.object({
-        connected: Joi.boolean().optional(),
-        lastSync: dateSchema.optional(),
-        historyId: Joi.string().optional(),
-    }).optional().unknown(true),
-    slack: Joi.object({
-        accessToken: Joi.string().optional(),
-        teamId: Joi.string().optional(),
-        userId: Joi.string().optional(),
-        botUserId: Joi.string().optional(),
-        scope: Joi.string().optional(),
-        lastSync: dateSchema.optional(),
-    }).optional().unknown(true),
-    password: Joi.forbidden(),
-    verificationToken: Joi.forbidden(),
-    verificationTokenExpires: Joi.forbidden()
+  name: Joi.string().min(2).max(50).optional(),
+  email: Joi.string().email().optional(),
+  password: Joi.string().min(6).optional(),
+  role: Joi.string().valid('individual', 'student', 'startup', 'admin').optional(),
+  isVerified: Joi.boolean().optional(),
+  settings: Joi.object({
+    theme: Joi.string().valid('light', 'dark', 'system').optional(),
+    timezone: Joi.string().optional(),
+  }).optional(),
+  // Add other fields an admin might update, e.g., status, etc.
 });
 
-// --- Task Schemas ---
+
+// --- Reminder Schemas (Tasks, Events, Goals) ---
 const taskReminderSchema = Joi.object({
     time: dateSchema.required(),
     message: Joi.string().optional().allow(''),
@@ -100,288 +73,293 @@ const taskReminderSchema = Joi.object({
     isSent: Joi.boolean().default(false).optional()
 });
 
+// --- Task Schemas ---
 const taskSchema = Joi.object({
-    title: Joi.string().min(3).max(200).required(),
-    description: Joi.string().max(1000).optional().allow(''),
-    dueDate: dateSchema.optional(),
-    status: Joi.string().valid('pending', 'in-progress', 'completed', 'deferred', 'cancelled').default('pending').required(),
-    priority: Joi.string().valid('low', 'medium', 'high', 'urgent').default('medium').required(),
-    tags: Joi.array().items(Joi.string().trim().min(1).max(50)).optional(),
-    project: JoiObjectId.objectId().optional().allow(null),
-    assignedTo: JoiObjectId.objectId().optional(),
-    reminders: Joi.array().items(taskReminderSchema).optional(),
+  title: Joi.string().min(5).max(200).required(),
+  description: Joi.string().max(1000).optional().allow(''),
+  priority: Joi.string().valid('low', 'medium', 'high', 'urgent').default('medium').optional(),
+  status: Joi.string().valid('pending', 'in-progress', 'completed', 'on_hold', 'cancelled').default('pending').optional(),
+  dueDate: dateSchema.min(Joi.ref('$now')).optional().allow(null),
+  tags: Joi.array().items(Joi.string().trim()).optional(),
+  reminders: Joi.array().items(taskReminderSchema).optional(),
+  relatedGoal: JoiObjectId.objectId().optional().allow(null),
 });
 
 const updateTaskSchema = Joi.object({
-    title: Joi.string().min(3).max(200).optional(),
-    description: Joi.string().max(1000).optional().allow(''),
-    dueDate: dateSchema.optional(),
-    status: Joi.string().valid('pending', 'in-progress', 'completed', 'deferred', 'cancelled').optional(),
-    priority: Joi.string().valid('low', 'medium', 'high', 'urgent').optional(),
-    tags: Joi.array().items(Joi.string().trim().min(1).max(50)).optional(),
-    project: JoiObjectId.objectId().optional().allow(null),
-    assignedTo: JoiObjectId.objectId().optional(),
-    reminders: Joi.array().items(taskReminderSchema).optional(),
-}).min(1);
+  title: Joi.string().min(5).max(200).optional(),
+  description: Joi.string().max(1000).optional().allow(''),
+  priority: Joi.string().valid('low', 'medium', 'high', 'urgent').optional(),
+  status: Joi.string().valid('pending', 'in-progress', 'completed', 'on_hold', 'cancelled').optional(),
+  dueDate: dateSchema.min(Joi.ref('$now')).optional().allow(null), // Can update to a future date
+  tags: Joi.array().items(Joi.string().trim()).optional(),
+  reminders: Joi.array().items(taskReminderSchema).optional(),
+  relatedGoal: JoiObjectId.objectId().optional().allow(null),
+}).min(1); // At least one field is required for update
+
 
 // --- Event Schemas ---
-const eventReminderSchema = Joi.object({
-    time: dateSchema.required(),
-    message: Joi.string().optional().allow(''),
-    method: Joi.string().valid('email', 'app_notification', 'sms').default('app_notification').optional(),
-    isSent: Joi.boolean().default(false).optional()
-});
-
 const eventSchema = Joi.object({
-    title: Joi.string().min(3).max(200).required(),
-    description: Joi.string().max(1000).optional().allow(''),
-    location: Joi.string().max(200).optional(),
-    startTime: dateSchema.required(),
-    endTime: dateSchema.required().greater(Joi.ref('startTime')),
-    allDay: Joi.boolean().default(false).optional(),
-    category: Joi.string().valid('meeting', 'appointment', 'personal', 'study', 'workout', 'other').default('meeting').optional(),
-    attendees: Joi.array().items(Joi.string().email()).optional(),
-    reminders: Joi.array().items(eventReminderSchema).optional(),
+  title: Joi.string().min(5).max(200).required(),
+  description: Joi.string().max(1000).optional().allow(''),
+  startTime: dateSchema.required(),
+  endTime: dateSchema.required().min(Joi.ref('startTime')).messages({'date.min': 'End time must be after start time'}),
+  location: Joi.string().max(300).optional().allow(''),
+  category: Joi.string().valid('meeting', 'appointment', 'personal', 'work', 'other').default('other').optional(),
+  tags: Joi.array().items(Joi.string().trim()).optional(),
+  attendees: Joi.array().items(Joi.string().email()).optional(), // Array of emails
+  isAllDay: Joi.boolean().default(false).optional(),
+  recurrence: Joi.string().valid('never', 'daily', 'weekly', 'monthly', 'yearly').default('never').optional(),
+  relatedProject: JoiObjectId.objectId().optional().allow(null),
 });
 
 const updateEventSchema = Joi.object({
-    title: Joi.string().min(3).max(200).optional(),
-    description: Joi.string().max(1000).optional().allow(''),
-    location: Joi.string().max(200).optional(),
-    startTime: dateSchema.optional(),
-    endTime: dateSchema.optional().greater(Joi.ref('startTime')),
-    allDay: Joi.boolean().optional(),
-    category: Joi.string().valid('meeting', 'appointment', 'personal', 'study', 'workout', 'other').optional(),
-    attendees: Joi.array().items(Joi.string().email()).optional(),
-    reminders: Joi.array().items(eventReminderSchema).optional(),
+  title: Joi.string().min(5).max(200).optional(),
+  description: Joi.string().max(1000).optional().allow(''),
+  startTime: dateSchema.optional(),
+  endTime: dateSchema.optional().min(Joi.ref('startTime', { adjust: (value) => value || new Date() })).messages({'date.min': 'End time must be after start time'}),
+  location: Joi.string().max(300).optional().allow(''),
+  category: Joi.string().valid('meeting', 'appointment', 'personal', 'work', 'other').optional(),
+  tags: Joi.array().items(Joi.string().trim()).optional(),
+  attendees: Joi.array().items(Joi.string().email()).optional(),
+  isAllDay: Joi.boolean().optional(),
+  recurrence: Joi.string().valid('never', 'daily', 'weekly', 'monthly', 'yearly').optional(),
+  relatedProject: JoiObjectId.objectId().optional().allow(null),
 }).min(1);
 
-// --- Message Schemas (Omnia Communicator) ---
+
+// --- Message Schemas ---
 const messageSchema = Joi.object({
-    type: Joi.string().valid('email_summary', 'draft', 'note', 'reminder', 'communication_log').required(),
-    subject: Joi.string().min(3).max(500).optional(),
-    content: Joi.string().min(10).max(5000).required(),
-    source: Joi.string().valid('manual', 'AI_generated', 'gmail', 'slack', 'other').default('manual').optional(),
-    externalReferenceId: Joi.string().optional(),
-    tags: Joi.array().items(Joi.string().trim().min(1).max(50)).optional(),
-    status: Joi.string().valid('read', 'unread', 'archived', 'deleted', 'pending_send', 'sent').default('unread').optional(),
-    scheduledSendTime: dateSchema.optional(),
-    relatedTask: JoiObjectId.objectId().optional(),
-    relatedEvent: JoiObjectId.objectId().optional(),
+  sender: JoiObjectId.objectId().required(), // Assuming internal sender ID
+  recipient: JoiObjectId.objectId().required(), // Assuming internal recipient ID
+  subject: Joi.string().min(1).max(200).required(),
+  body: Joi.string().min(1).optional().allow(''),
+  type: Joi.string().valid('email', 'chat', 'notification').default('chat').optional(),
+  status: Joi.string().valid('sent', 'draft', 'read', 'unread').default('unread').optional(),
+  attachments: Joi.array().items(Joi.object({
+    filename: Joi.string().required(),
+    url: Joi.string().uri().required(),
+  })).optional(),
+  relatedTask: JoiObjectId.objectId().optional().allow(null),
+  relatedProject: JoiObjectId.objectId().optional().allow(null),
 });
 
 const updateMessageSchema = Joi.object({
-    type: Joi.string().valid('email_summary', 'draft', 'note', 'reminder', 'communication_log').optional(),
-    subject: Joi.string().min(3).max(500).optional(),
-    content: Joi.string().min(10).max(5000).optional(),
-    source: Joi.string().valid('manual', 'AI_generated', 'gmail', 'slack', 'other').optional(),
-    externalReferenceId: Joi.string().optional(),
-    tags: Joi.array().items(Joi.string().trim().min(1).max(50)).optional(),
-    status: Joi.string().valid('read', 'unread', 'archived', 'deleted', 'pending_send', 'sent').optional(),
-    scheduledSendTime: dateSchema.optional(),
-    relatedTask: JoiObjectId.objectId().optional(),
-    relatedEvent: JoiObjectId.objectId().optional(),
+  sender: JoiObjectId.objectId().optional(),
+  recipient: JoiObjectId.objectId().optional(),
+  subject: Joi.string().min(1).max(200).optional(),
+  body: Joi.string().min(1).optional().allow(''),
+  type: Joi.string().valid('email', 'chat', 'notification').optional(),
+  status: Joi.string().valid('sent', 'draft', 'read', 'unread').optional(),
+  attachments: Joi.array().items(Joi.object({
+    filename: Joi.string().required(),
+    url: Joi.string().uri().required(),
+  })).optional(),
+  relatedTask: JoiObjectId.objectId().optional().allow(null),
+  relatedProject: JoiObjectId.objectId().optional().allow(null),
 }).min(1);
 
 const summarizeContentSchema = Joi.object({
-    text: Joi.string().min(50).max(10000).required(),
-    promptPrefix: Joi.string().optional(),
+  content: Joi.string().min(1).required(),
+  length: Joi.string().valid('short', 'medium', 'long').default('medium').optional(),
+  format: Joi.string().valid('paragraph', 'bullet_points').default('paragraph').optional(),
 });
 
 const generateDraftSchema = Joi.object({
-    instruction: Joi.string().min(20).max(2000).required(),
-    context: Joi.string().optional(),
-    tone: Joi.string().valid('professional', 'friendly', 'urgent', 'formal', 'casual').default('professional').optional(),
-    format: Joi.string().valid('email', 'slack_message', 'formal_letter', 'memo').default('email').optional(),
+  prompt: Joi.string().min(1).required(),
+  context: Joi.string().optional().allow(''),
+  length: Joi.string().valid('short', 'medium', 'long').default('medium').optional(),
+  tone: Joi.string().valid('formal', 'informal', 'neutral', 'friendly', 'urgent').default('neutral').optional(),
 });
 
-// --- Goal Schemas (Omnia Coach) ---
+
+// --- Goal Schemas ---
 const goalReminderSchema = Joi.object({
-    time: dateSchema.required(),
-    message: Joi.string().required(),
-    method: Joi.string().valid('email', 'app_notification', 'sms').default('app_notification').optional(),
-    isSent: Joi.boolean().default(false).optional()
+  time: dateSchema.required(),
+  message: Joi.string().optional().allow(''),
+  method: Joi.string().valid('email', 'app_notification', 'sms').default('app_notification').optional(),
+  isSent: Joi.boolean().default(false).optional()
 });
 
 const goalSchema = Joi.object({
-    title: Joi.string().min(5).max(200).required(),
-    description: Joi.string().max(1000).optional().allow(''),
-    category: Joi.string().valid('professional', 'personal', 'education', 'health', 'finance', 'other').default('personal').optional(),
-    targetDate: dateSchema.required().min(Joi.ref('$now')).messages({'date.min': '{{#label}} cannot be in the past for new goals.'}),
-    progress: Joi.number().min(0).max(100).default(0).optional(),
-    status: Joi.string().valid('active', 'completed', 'overdue', 'cancelled', 'on_hold').default('active').optional(),
-    relatedTasks: Joi.array().items(JoiObjectId.objectId()).optional(),
-    reminders: Joi.array().items(goalReminderSchema).optional(),
+  title: Joi.string().min(5).max(200).required(),
+  description: Joi.string().max(1000).optional().allow(''),
+  category: Joi.string().valid('personal', 'professional', 'health', 'finance', 'education', 'other').default('other').optional(),
+  startDate: dateSchema.required(),
+  endDate: dateSchema.required().min(Joi.ref('startDate')).messages({'date.min': 'End date must be after start date'}),
+  status: Joi.string().valid('not_started', 'in_progress', 'completed', 'on_hold', 'cancelled').default('not_started').optional(),
+  priority: Joi.string().valid('low', 'medium', 'high', 'urgent').default('medium').optional(),
+  tags: Joi.array().items(Joi.string().trim()).optional(),
+  reminders: Joi.array().items(goalReminderSchema).optional(),
+  progress: Joi.number().min(0).max(100).default(0).optional(),
+  linkedResources: Joi.array().items(JoiObjectId.objectId()).optional(),
 });
 
 const updateGoalSchema = Joi.object({
-    title: Joi.string().min(5).max(200).optional(),
-    description: Joi.string().max(1000).optional().allow(''),
-    category: Joi.string().valid('professional', 'personal', 'education', 'health', 'finance', 'other').optional(),
-    targetDate: dateSchema.optional(),
-    progress: Joi.number().min(0).max(100).optional(),
-    status: Joi.string().valid('active', 'completed', 'overdue', 'cancelled', 'on_hold').optional(),
-    relatedTasks: Joi.array().items(JoiObjectId.objectId()).optional(),
-    reminders: Joi.array().items(goalReminderSchema).optional(),
+  title: Joi.string().min(5).max(200).optional(),
+  description: Joi.string().max(1000).optional().allow(''),
+  category: Joi.string().valid('personal', 'professional', 'health', 'finance', 'education', 'other').optional(),
+  startDate: dateSchema.optional(),
+  endDate: dateSchema.optional().min(Joi.ref('startDate', { adjust: (value) => value || new Date() })).messages({'date.min': 'End date must be after start date'}),
+  status: Joi.string().valid('not_started', 'in_progress', 'completed', 'on_hold', 'cancelled').optional(),
+  priority: Joi.string().valid('low', 'medium', 'high', 'urgent').optional(),
+  tags: Joi.array().items(Joi.string().trim()).optional(),
+  reminders: Joi.array().items(goalReminderSchema).optional(),
+  progress: Joi.number().min(0).max(100).optional(),
+  linkedResources: Joi.array().items(JoiObjectId.objectId()).optional(),
 }).min(1);
 
-// --- Learning Resource Schemas (Omnia Coach) ---
+
+// --- Learning Resource Schemas ---
 const learningResourceSchema = Joi.object({
-    title: Joi.string().min(5).max(300).required(),
-    description: Joi.string().max(1000).optional().allow(''),
-    url: Joi.string().uri().required().messages({
-        'string.uri': '{{#label}} must be a valid URL',
-        'any.required': '{{#label}} is required'
-    }),
-    type: Joi.string().valid('article', 'video', 'course', 'book', 'podcast', 'tool', 'other').required(),
-    category: Joi.string().valid('programming', 'marketing', 'finance', 'design', 'self-improvement', 'other').default('other').optional(),
-    tags: Joi.array().items(Joi.string().trim().min(1).max(50)).optional(),
-    relatedGoal: JoiObjectId.objectId().optional().allow(null),
-    source: Joi.string().valid('manual', 'AI_suggested', 'web_scrape', 'imported').default('manual').optional(),
+  title: Joi.string().min(5).max(300).required(),
+  description: Joi.string().max(1000).optional().allow(''),
+  url: Joi.string().uri().required(),
+  type: Joi.string().valid('article', 'video', 'course', 'book', 'podcast', 'tool', 'other').required(),
+  category: Joi.string().valid('programming', 'marketing', 'finance', 'design', 'self-improvement', 'other').default('other').optional(),
+  tags: Joi.array().items(Joi.string().trim()).optional(),
+  relatedGoal: JoiObjectId.objectId().optional().allow(null),
+  source: Joi.string().valid('manual', 'AI_suggested', 'web_scrape', 'imported').default('manual').optional(),
 });
 
 const updateLearningResourceSchema = Joi.object({
-    title: Joi.string().min(5).max(300).optional(),
-    description: Joi.string().max(1000).optional().allow(''),
-    url: Joi.string().uri().optional().messages({
-        'string.uri': '{{#label}} must be a valid URL',
-    }),
-    type: Joi.string().valid('article', 'video', 'course', 'book', 'podcast', 'tool', 'other').optional(),
-    category: Joi.string().valid('programming', 'marketing', 'finance', 'design', 'self-improvement', 'other').optional(),
-    tags: Joi.array().items(Joi.string().trim().min(1).max(50)).optional(),
-    relatedGoal: JoiObjectId.objectId().optional().allow(null),
-    source: Joi.string().valid('manual', 'AI_suggested', 'web_scrape', 'imported').optional(),
+  title: Joi.string().min(5).max(300).optional(),
+  description: Joi.string().max(1000).optional().allow(''),
+  url: Joi.string().uri().optional(),
+  type: Joi.string().valid('article', 'video', 'course', 'book', 'podcast', 'tool', 'other').optional(),
+  category: Joi.string().valid('programming', 'marketing', 'finance', 'design', 'self-improvement', 'other').optional(),
+  tags: Joi.array().items(Joi.string().trim()).optional(),
+  relatedGoal: JoiObjectId.objectId().optional().allow(null),
+  source: Joi.string().valid('manual', 'AI_suggested', 'web_scrape', 'imported').optional(),
 }).min(1);
 
-// --- Project Schemas (Omnia Workspace) ---
+
+// --- Project Schemas ---
 const projectSchema = Joi.object({
-    title: Joi.string().min(5).max(200).required(),
-    description: Joi.string().max(1000).optional().allow(''),
-    startDate: dateSchema.optional(),
-    endDate: dateSchema.optional().greater(Joi.ref('startDate')),
-    status: Joi.string().valid('planning', 'in-progress', 'completed', 'on_hold', 'cancelled').default('planning').required(),
-    priority: Joi.string().valid('low', 'medium', 'high', 'urgent').default('medium').optional(),
-    members: Joi.array().items(JoiObjectId.objectId()).optional(),
-    tags: Joi.array().items(Joi.string().trim().min(1).max(50)).optional(),
-    files: Joi.array().items(Joi.object({
-      name: Joi.string().required(),
-      url: Joi.string().uri().required(),
-      uploadedAt: dateSchema.optional().default(Joi.ref('$now'))
-    })).optional(),
+  title: Joi.string().min(5).max(200).required(),
+  description: Joi.string().max(1000).optional().allow(''),
+  startDate: dateSchema.optional().allow(null),
+  endDate: dateSchema.optional().min(Joi.ref('startDate', { adjust: (value) => value || new Date() })).messages({'date.min': 'End date must be after start date'}).allow(null),
+  status: Joi.string().valid('planning', 'in-progress', 'completed', 'on_hold', 'cancelled').default('planning').optional(),
+  priority: Joi.string().valid('low', 'medium', 'high', 'urgent').default('medium').optional(),
+  members: Joi.array().items(JoiObjectId.objectId()).optional(),
+  tags: Joi.array().items(Joi.string().trim()).optional(),
+  files: Joi.array().items(Joi.object({
+    name: Joi.string().required(),
+    url: Joi.string().uri().required(),
+    uploadedAt: dateSchema.optional().default(Joi.ref('$now')),
+  })).optional(),
 });
 
 const updateProjectSchema = Joi.object({
-    title: Joi.string().min(5).max(200).optional(),
-    description: Joi.string().max(1000).optional().allow(''),
-    startDate: dateSchema.optional(),
-    endDate: dateSchema.optional().greater(Joi.ref('startDate')),
-    status: Joi.string().valid('planning', 'in-progress', 'completed', 'on_hold', 'cancelled').optional(),
-    priority: Joi.string().valid('low', 'medium', 'high', 'urgent').optional(),
-    tags: Joi.array().items(Joi.string().trim().min(1).max(50)).optional(),
-    files: Joi.array().items(Joi.object({
-      name: Joi.string().optional(),
-      url: Joi.string().uri().optional(),
-      uploadedAt: dateSchema.optional()
-    })).optional(),
+  title: Joi.string().min(5).max(200).optional(),
+  description: Joi.string().max(1000).optional().allow(''),
+  startDate: dateSchema.optional().allow(null),
+  endDate: dateSchema.optional().min(Joi.ref('startDate', { adjust: (value) => value || new Date() })).messages({'date.min': 'End date must be after start date'}).allow(null),
+  status: Joi.string().valid('planning', 'in-progress', 'completed', 'on_hold', 'cancelled').optional(),
+  priority: Joi.string().valid('low', 'medium', 'high', 'urgent').optional(),
+  tags: Joi.array().items(Joi.string().trim()).optional(),
+  // Members and files typically managed via separate routes
+  files: Joi.array().items(Joi.object({
+    name: Joi.string().required(),
+    url: Joi.string().uri().required(),
+    uploadedAt: dateSchema.optional(),
+  })).optional(),
 }).min(1);
 
 const addRemoveMemberSchema = Joi.object({
-    memberId: JoiObjectId.objectId().required(),
+  memberId: JoiObjectId.objectId().required(),
 });
 
-// --- Expense Schemas (Omnia Finance) ---
+
+// --- Expense Schemas ---
 const expenseSchema = Joi.object({
-    description: Joi.string().min(3).max(200).optional().allow(''),
-    amount: Joi.number().min(0.01).required(),
-    category: Joi.string().valid('food', 'transport', 'housing', 'utilities', 'entertainment', 'shopping', 'education', 'health', 'work', 'bills', 'savings', 'other').required(),
-    date: dateSchema.required(),
-    tags: Joi.array().items(Joi.string().trim().min(1).max(50)).optional(),
-    paymentMethod: Joi.string().valid('cash', 'credit_card', 'debit_card', 'bank_transfer', 'mobile_money', 'other').default('other').optional(),
-    receiptUrl: Joi.string().uri().optional().allow(null, ''),
+  description: Joi.string().max(200).optional().allow(''),
+  amount: Joi.number().min(0.01).required(),
+  category: Joi.string().valid('food', 'transport', 'housing', 'utilities', 'entertainment', 'shopping', 'education', 'health', 'work', 'bills', 'savings', 'other').required(),
+  date: dateSchema.required(),
+  tags: Joi.array().items(Joi.string().trim()).optional(),
+  paymentMethod: Joi.string().valid('cash', 'credit_card', 'debit_card', 'bank_transfer', 'mobile_money', 'other').default('other').optional(),
+  receiptUrl: Joi.string().uri().optional().allow(''),
 });
 
 const updateExpenseSchema = Joi.object({
-    description: Joi.string().min(3).max(200).optional().allow(''),
-    amount: Joi.number().min(0.01).optional(),
-    category: Joi.string().valid('food', 'transport', 'housing', 'utilities', 'entertainment', 'shopping', 'education', 'health', 'work', 'bills', 'savings', 'other').optional(),
-    date: dateSchema.optional(),
-    tags: Joi.array().items(Joi.string().trim().min(1).max(50)).optional(),
-    paymentMethod: Joi.string().valid('cash', 'credit_card', 'debit_card', 'bank_transfer', 'mobile_money', 'other').optional(),
-    receiptUrl: Joi.string().uri().optional().allow(null, ''),
+  description: Joi.string().max(200).optional().allow(''),
+  amount: Joi.number().min(0.01).optional(),
+  category: Joi.string().valid('food', 'transport', 'housing', 'utilities', 'entertainment', 'shopping', 'education', 'health', 'work', 'bills', 'savings', 'other').optional(),
+  date: dateSchema.optional(),
+  tags: Joi.array().items(Joi.string().trim()).optional(),
+  paymentMethod: Joi.string().valid('cash', 'credit_card', 'debit_card', 'bank_transfer', 'mobile_money', 'other').optional(),
+  receiptUrl: Joi.string().uri().optional().allow(''),
 }).min(1);
 
-// --- Budget Schemas (Omnia Finance) ---
+
+// --- Budget Schemas ---
 const budgetSchema = Joi.object({
-    category: Joi.string().valid('food', 'transport', 'housing', 'utilities', 'entertainment', 'shopping', 'education', 'health', 'work', 'bills', 'savings', 'other', 'all').required(),
-    limitAmount: Joi.number().min(0).required(),
-    startDate: dateSchema.required(),
-    endDate: dateSchema.required().greater(Joi.ref('startDate')),
-    periodType: Joi.string().valid('daily', 'weekly', 'monthly', 'yearly', 'custom').default('custom').optional(),
-    alertThreshold: Joi.number().min(0).max(100).default(80).optional(),
+  category: Joi.string().valid('food', 'transport', 'housing', 'utilities', 'entertainment', 'shopping', 'education', 'health', 'work', 'bills', 'savings', 'other', 'all').required(),
+  limitAmount: Joi.number().min(0).required(),
+  startDate: dateSchema.required(),
+  endDate: dateSchema.required().min(Joi.ref('startDate')).messages({'date.min': 'End date must be after start date'}),
+  periodType: Joi.string().valid('daily', 'weekly', 'monthly', 'yearly', 'custom').default('custom').optional(),
+  alertThreshold: Joi.number().min(0).max(100).default(80).optional(),
 });
 
 const updateBudgetSchema = Joi.object({
-    category: Joi.string().valid('food', 'transport', 'housing', 'utilities', 'entertainment', 'shopping', 'education', 'health', 'work', 'bills', 'savings', 'other', 'all').optional(),
-    limitAmount: Joi.number().min(0).optional(),
-    startDate: dateSchema.optional(),
-    endDate: dateSchema.optional().greater(Joi.ref('startDate')),
-    periodType: Joi.string().valid('daily', 'weekly', 'monthly', 'yearly', 'custom').optional(),
-    alertThreshold: Joi.number().min(0).max(100).optional(),
+  category: Joi.string().valid('food', 'transport', 'housing', 'utilities', 'entertainment', 'shopping', 'education', 'health', 'work', 'bills', 'savings', 'other', 'all').optional(),
+  limitAmount: Joi.number().min(0).optional(),
+  startDate: dateSchema.optional(),
+  endDate: dateSchema.optional().min(Joi.ref('startDate', { adjust: (value) => value || new Date() })).messages({'date.min': 'End date must be after start date'}),
+  periodType: Joi.string().valid('daily', 'weekly', 'monthly', 'yearly', 'custom').optional(),
+  alertThreshold: Joi.number().min(0).max(100).optional(),
 }).min(1);
 
-// --- Wellness Schemas (Omnia Wellness) ---
+
+// --- Wellness Schemas ---
 const wellnessRecordSchema = Joi.object({
-    type: Joi.string().valid('break', 'meal', 'exercise', 'mindfulness', 'sleep', 'water_intake', 'custom').required(),
-    date: dateSchema.required(),
-    durationMinutes: Joi.number().min(1).optional(),
-    details: Joi.string().max(500).optional().allow(''),
-    intensity: Joi.string().valid('low', 'medium', 'high').optional(),
-    moodBefore: Joi.string().valid('stressed', 'neutral', 'happy', 'tired', 'motivated', 'anxious').optional(),
-    moodAfter: Joi.string().valid('stressed', 'neutral', 'happy', 'tired', 'motivated', 'anxious').optional(),
-    caloriesConsumed: Joi.number().min(0).optional(),
-    waterAmountMl: Joi.number().min(0).optional(),
+  type: Joi.string().valid('mood', 'sleep', 'exercise', 'diet', 'meditation', 'other').required(),
+  value: Joi.string().min(1).max(500).required(), // e.g., "Good", "7 hours", "30 min run"
+  notes: Joi.string().max(1000).optional().allow(''),
+  date: dateSchema.default(Joi.ref('$now')).optional(),
+  tags: Joi.array().items(Joi.string().trim()).optional(),
 });
 
 const updateWellnessRecordSchema = Joi.object({
-    type: Joi.string().valid('break', 'meal', 'exercise', 'mindfulness', 'sleep', 'water_intake', 'custom').optional(),
-    date: dateSchema.optional(),
-    durationMinutes: Joi.number().min(1).optional(),
-    details: Joi.string().max(500).optional().allow(''),
-    intensity: Joi.string().valid('low', 'medium', 'high').optional(),
-    moodBefore: Joi.string().valid('stressed', 'neutral', 'happy', 'tired', 'motivated', 'anxious').optional(),
-    moodAfter: Joi.string().valid('stressed', 'neutral', 'happy', 'tired', 'motivated', 'anxious').optional(),
-    caloriesConsumed: Joi.number().min(0).optional(),
-    waterAmountMl: Joi.number().min(0).optional(),
+  type: Joi.string().valid('mood', 'sleep', 'exercise', 'diet', 'meditation', 'other').optional(),
+  value: Joi.string().min(1).max(500).optional(),
+  notes: Joi.string().max(1000).optional().allow(''),
+  date: dateSchema.optional(),
+  tags: Joi.array().items(Joi.string().trim()).optional(),
 }).min(1);
 
 const wellnessSuggestionSchema = Joi.object({
-    suggestionType: Joi.string().valid('general', 'break', 'meal', 'exercise', 'mindfulness', 'hydration', 'sleep_aid').default('general').optional(),
-    customContext: Joi.string().optional(),
+  prompt: Joi.string().min(1).required(),
+  context: Joi.string().optional().allow(''),
+  type: Joi.string().valid('exercise', 'diet', 'mindfulness', 'productivity', 'other').default('other').optional(),
 });
 
-// --- Integrations Schemas (Slack) ---
+
+// --- Integrations Schemas ---
 const slackMessageSchema = Joi.object({
-    channelId: Joi.string().required().description('Slack channel ID (e.g., C01234ABCD) or user ID for DM (e.g., U01234ABCD).'),
-    text: Joi.string().min(1).max(3000).required().description('The message content to send.'),
-    options: Joi.object().optional().unknown(true).description('Optional additional Slack API chat.postMessage parameters.'),
+  channel: Joi.string().required(),
+  message: Joi.string().required(),
 });
 
 const summarizeSlackChannelSchema = Joi.object({
-    channelId: Joi.string().required().description('Slack channel ID to summarize.'),
-    count: Joi.number().min(1).max(100).default(50).optional().description('Number of recent messages to fetch.'),
+  channel: Joi.string().required(),
+  numMessages: Joi.number().integer().min(1).max(100).default(20).optional(),
+  timeframe: Joi.string().optional().allow(''), // e.g., "last 24 hours"
 });
 
-// --- Integrations Schemas (Gmail) ---
 const summarizeGmailInboxSchema = Joi.object({
-    maxResults: Joi.number().min(1).max(50).default(10).optional().description('Maximum number of recent emails to fetch and summarize.'),
+  numEmails: Joi.number().integer().min(1).max(50).default(10).optional(),
+  timeframe: Joi.string().optional().allow(''), // e.g., "last week"
+  sender: Joi.string().email().optional().allow(''),
 });
 
 const sendGmailDraftSchema = Joi.object({
-    to: Joi.string().required().pattern(/^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-1]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))(,\s*(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-1]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))})*$/)
-        .message('{{#label}} must be a valid comma-separated list of email addresses.').description('Recipient email address(es) (comma-separated for multiple).'),
-    subject: Joi.string().required().description('Subject of the email.'),
-    bodyText: Joi.string().required().description('Plain text content of the email.'),
-    replyToMessageId: Joi.string().optional().description('Optional. Gmail message ID to reply to (for threading).'),
+  recipientEmail: Joi.string().email().required(),
+  subject: Joi.string().required(),
+  body: Joi.string().required(),
+  threadId: Joi.string().optional().allow(''), // For replying to a specific thread
 });
 
 
@@ -395,17 +373,19 @@ const sendGmailDraftSchema = Joi.object({
 const validate = (schema, property = 'body') => (req, res, next) => {
   console.log(`[Validation Middleware] Validating property '${property}'.`);
   if (property === 'params') {
-    // Console log for params is now moved to router.param
-    // console.log(`[Validation Middleware] req.params.id: '${req.params.id}', type: ${typeof req.params.id}`);
+    console.log(`[Validation Middleware] req.params:`, req.params); // Log all params
+  }
+  if (property === 'query') {
+    console.log(`[Validation Middleware] req.query:`, req.query); // Log all queries
   }
 
-  // Pass context for schemas that need it (e.g., targetDate.min(Joi.ref('$now')))
+
   const context = { $now: new Date() };
 
   const { error, value } = schema.validate(req[property], {
-    abortEarly: false, // Return all errors found
-    allowUnknown: false, // Disallow unknown properties (strict validation)
-    context: context, // Pass context to validation
+    abortEarly: false,
+    allowUnknown: false,
+    context: context,
   });
 
   if (error) {
@@ -418,57 +398,48 @@ const validate = (schema, property = 'body') => (req, res, next) => {
   next();
 };
 
+// --- EXPORTS ---
 module.exports = {
+  // Validate a generic ID in params - use this specifically for routes needing ID validation
+  validateIdParam: validate(paramIdSchema, 'params'), // Renamed to clarify its purpose for params
 
-
-  // Auth validation
   validateRegister: validate(registerSchema),
   validateLogin: validate(loginSchema),
   validateVerifyEmail: validate(verifyEmailSchema),
   validateUpdateUserProfile: validate(updateUserProfileSchema),
   validateAdminUpdateUser: validate(adminUpdateUserSchema),
 
-  // Task validation
   validateCreateTask: validate(taskSchema),
   validateUpdateTask: validate(updateTaskSchema),
 
-  // Event validation
   validateCreateEvent: validate(eventSchema),
   validateUpdateEvent: validate(updateEventSchema),
 
-  // Message validation
   validateCreateMessage: validate(messageSchema),
   validateUpdateMessage: validate(updateMessageSchema),
   validateSummarizeContent: validate(summarizeContentSchema),
   validateGenerateDraft: validate(generateDraftSchema),
 
-  // Goal validation
   validateCreateGoal: validate(goalSchema),
   validateUpdateGoal: validate(updateGoalSchema),
 
-  // Learning Resource validation
   validateCreateLearningResource: validate(learningResourceSchema),
   validateUpdateLearningResource: validate(updateLearningResourceSchema),
 
-  // Project validation
   validateCreateProject: validate(projectSchema),
   validateUpdateProject: validate(updateProjectSchema),
   validateAddRemoveMember: validate(addRemoveMemberSchema),
 
-  // Expense validation
   validateCreateExpense: validate(expenseSchema),
   validateUpdateExpense: validate(updateExpenseSchema),
 
-  // Budget validation
-  validateCreateBudget: validate(budgetSchema), // Now defined
-  validateUpdateBudget: validate(updateBudgetSchema), // Now defined
+  validateCreateBudget: validate(budgetSchema),
+  validateUpdateBudget: validate(updateBudgetSchema),
 
-  // Wellness validation
   validateCreateWellnessRecord: validate(wellnessRecordSchema),
   validateUpdateWellnessRecord: validate(updateWellnessRecordSchema),
   validateWellnessSuggestion: validate(wellnessSuggestionSchema),
 
-  // Integrations validation
   validateSlackMessage: validate(slackMessageSchema),
   validateSummarizeSlackChannel: validate(summarizeSlackChannelSchema),
   validateSummarizeGmailInbox: validate(summarizeGmailInboxSchema),

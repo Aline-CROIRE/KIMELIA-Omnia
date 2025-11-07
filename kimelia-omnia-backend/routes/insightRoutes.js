@@ -1,3 +1,4 @@
+
 const express = require('express');
 const {
   getProductivitySummary,
@@ -6,6 +7,9 @@ const {
   getAIGoalRecommendation,
 } = require('../controllers/insightController');
 const { protect } = require('../middleware/authMiddleware');
+const {
+  validateIdParam // --- ADDED: Import validateIdParam for goalId ---
+} = require('../middleware/validationMiddleware');
 const router = express.Router();
 
 /**
@@ -211,6 +215,6 @@ router.post('/insights/ai-productivity-recommendations', getAIPersonalityRecomme
  *       500:
  *         $ref: '#/components/responses/ServerError'
  */
-router.post('/insights/ai-goal-recommendations/:goalId', getAIGoalRecommendation);
+router.post('/insights/ai-goal-recommendations/:goalId', validateIdParam, getAIGoalRecommendation); // --- ADDED validateIdParam ---
 
 module.exports = router;
