@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Text } from 'react-native';
 import {
   GradientBackground,
   ContentContainer,
@@ -18,9 +18,9 @@ const CoachHomeScreen = ({ navigation }) => {
   return (
     <GradientBackground>
       <ContentContainer style={styles.contentContainer}>
-        <Title style={styles.mainTitle}>Omnia Coach</Title>
+        <Title style={styles.mainTitle}><Text>Omnia Coach</Text></Title>
         <SubTitle style={styles.tagline}>
-          Track your progress, achieve your goals, and master new skills.
+          <Text>Track your progress, achieve your goals, and master new skills.</Text>
         </SubTitle>
 
         {/* Goals Module Card */}
@@ -35,7 +35,7 @@ const CoachHomeScreen = ({ navigation }) => {
         </ModuleCard>
 
         {/* Learning Resources Module Card */}
-        <ModuleCard onPress={() => navigation.navigate('LearningResourceList')} style={styles.moduleCard}> {/* --- UPDATED NAVIGATION --- */}
+        <ModuleCard onPress={() => navigation.navigate('LearningResourceList')} style={styles.moduleCard}>
           <ModuleCardBackground colors={GRADIENTS.goldAccent}>
             <MaterialCommunityIcons name="book-open-variant" size={50} color={COLORS.white} />
             <ModuleCardContent>
@@ -45,13 +45,25 @@ const CoachHomeScreen = ({ navigation }) => {
           </ModuleCardBackground>
         </ModuleCard>
 
+        {/* --- NEW: AI Generate Resources Card --- */}
+        <ModuleCard onPress={() => navigation.navigate('LearningResourceAIGenerate')} style={styles.moduleCard}>
+          <ModuleCardBackground colors={GRADIENTS.tertiaryButton}> {/* Using a distinct gradient for AI */}
+            <MaterialCommunityIcons name="robot-happy-outline" size={50} color={COLORS.white} />
+            <ModuleCardContent>
+              <ModuleCardTitle>AI Resource Generator</ModuleCardTitle>
+              <ModuleCardDescription>Let AI suggest new learning materials for you.</ModuleCardDescription>
+            </ModuleCardContent>
+          </ModuleCardBackground>
+        </ModuleCard>
+        {/* --- END NEW --- */}
+
         {/* Motivational Tips Card (Placeholder for later implementation) */}
         <ModuleCard onPress={() => console.log('Show Motivational Tip')} style={styles.moduleCard}>
           <ModuleCardBackground colors={GRADIENTS.secondaryButton}>
             <MaterialCommunityIcons name="lightbulb-on-outline" size={50} color={COLORS.deepCoffee} />
             <ModuleCardContent>
-              <ModuleCardTitle style={{ color: COLORS.deepCoffee }}>Motivational Tip</ModuleCardTitle>
-              <ModuleCardDescription style={{ color: COLORS.chocolateBrown }}>Get inspired with a daily dose of motivation.</ModuleCardDescription>
+              <ModuleCardTitle style={{ color: COLORS.deepCoffee }}><Text>Motivational Tip</Text></ModuleCardTitle>
+              <ModuleCardDescription style={{ color: COLORS.chocolateBrown }}><Text>Get inspired with a daily dose of motivation.</Text></ModuleCardDescription>
             </ModuleCardContent>
           </ModuleCardBackground>
         </ModuleCard>

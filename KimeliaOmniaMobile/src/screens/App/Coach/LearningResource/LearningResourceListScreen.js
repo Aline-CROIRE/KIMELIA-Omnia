@@ -113,6 +113,19 @@ const LearningResourceListScreen = ({ navigation }) => {
             </GradientButtonBackground>
           </GradientButton>
         </View>
+        
+        {/* --- NEW: AI Generate Resources Button --- */}
+        <View style={styles.aiGenerateButtonContainer}>
+          <GradientButton onPress={() => navigation.navigate('LearningResourceAIGenerate')} style={styles.aiGenerateButton}>
+            <GradientButtonBackground colors={GRADIENTS.goldAccent}>
+              <Row style={styles.aiGenerateButtonContent}>
+                <MaterialCommunityIcons name="robot-outline" size={20} color={COLORS.white} />
+                <ButtonText style={styles.aiGenerateButtonText}>AI Generate Resources</ButtonText>
+              </Row>
+            </GradientButtonBackground>
+          </GradientButton>
+        </View>
+        {/* --- END NEW --- */}
 
         {error ? <ErrorText><Text>{error}</Text></ErrorText> : null}
         <FlatList
@@ -125,7 +138,7 @@ const LearningResourceListScreen = ({ navigation }) => {
               <MaterialCommunityIcons name="book-open-variant" size={60} color={COLORS.lightCocoa} style={styles.emptyStateIcon} />
               <SubTitle style={styles.emptyStateTitle}>No Learning Resources Found</SubTitle>
               <DetailText style={styles.emptyStateDescription}>
-                <Text>Start your learning journey! Tap the '+' button below to add your first resource.</Text>
+                <Text>Start your learning journey! Tap the '+' button below to add your first resource, or try AI generation!</Text>
               </DetailText>
             </View>
           }
@@ -165,6 +178,28 @@ const styles = StyleSheet.create({
   coachHomeButton: {
     borderRadius: 12,
   },
+  // --- NEW STYLES FOR AI BUTTON ---
+  aiGenerateButtonContainer: {
+    width: '100%',
+    paddingHorizontal: 20,
+    marginBottom: 20,
+  },
+  aiGenerateButton: {
+    borderRadius: 12,
+  },
+  aiGenerateButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  aiGenerateButtonText: {
+    fontSize: 16,
+    fontFamily: FONTS.primary,
+    fontWeight: 'bold',
+    color: COLORS.white,
+  },
+  // --- END NEW STYLES ---
   flatListContent: {
     paddingHorizontal: 20,
     width: '100%',

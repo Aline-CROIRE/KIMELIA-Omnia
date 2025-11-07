@@ -242,8 +242,6 @@ Actionable Advice for Goal Achievement:`;
   }
 };
 
-// --- AI Functions for Omnia Wellness (Enhanced) ---
-
 /**
  * @function getWellnessSuggestion
  * @description Generates AI-driven wellness suggestions based on detailed user wellness context.
@@ -289,6 +287,84 @@ Wellness Suggestion:`;
 };
 
 
+// --- NEW: AI-Powered Learning Resource Generation ---
+
+/**
+ * @function generateLearningResources
+ * @description Generates a list of AI-curated learning resources (titles, descriptions, and mock URLs) based on a given topic or goal.
+ * @param {string} topic - The topic or goal for which to generate learning resources.
+ * @param {string} [typeHint='any'] - A hint for the type of resources (e.g., 'articles', 'videos', 'courses').
+ * @param {string} [difficulty='beginner'] - The desired difficulty level.
+ * @returns {Promise<Array<Object>>} - An array of suggested learning resource objects.
+ *   Example: [{ title, description, url, type, category, source: 'AI_suggested' }]
+ * @throws {Error} If the OpenAI API call fails or API key is missing.
+ */
+const generateLearningResources = async (topic, typeHint = 'any', difficulty = 'beginner') => {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error('OpenAI API Key is not configured for generating learning resources.');
+  }
+  if (!topic || topic.length < 10) {
+    throw new Error('Please provide a specific topic or goal (at least 10 characters) for generating learning resources.');
+  }
+
+  const systemMessage = `You are an AI learning assistant. Your task is to suggest relevant learning resources for a given topic. For each suggestion, provide a concise title, a brief description, a plausible URL (it doesn't have to be real, but should look like a real, helpful resource link), the resource type, and a category. Aim for 3-5 diverse resources. Format your output as a JSON array of objects.`;
+
+  const userPrompt = `Generate 3-5 learning resources for the topic: "${topic}".
+  Desired resource types: ${typeHint}.
+  Difficulty level: ${difficulty}.
+
+  Format your response as a JSON array, where each object has:
+  - "title": string
+  - "description": string
+  - "url": string (a realistic-looking URL, not necessarily functional)
+  - "type": string (e.g., "article", "video", "course", "book", "podcast", "tool", "other")
+  - "category": string (e.g., "programming", "marketing", "finance", "design", "self-improvement", "other")
+  - "source": "AI_suggested"
+  `;
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo-1106", // gpt-3.5-turbo-1106 or gpt-4 for better JSON mode support
+      messages: [
+        { role: "system", content: systemMessage },
+        { role: "user", content: userPrompt },
+      ],
+      max_tokens: 700, // Sufficient for 3-5 resources
+      temperature: 0.7,
+      response_format: { type: "json_object" }, // Request JSON object output
+    });
+
+    const responseContent = completion.choices[0].message.content.trim();
+    // Assuming the AI responds with a JSON object containing a key, e.g., "resources": [...]
+    const parsedResponse = JSON.parse(responseContent);
+
+    // Look for a key that contains the array of resources, e.g., 'resources', 'learning_resources'
+    const resourceArray = parsedResponse.resources || parsedResponse.learning_resources || Object.values(parsedResponse).find(Array.isArray);
+
+    if (!resourceArray || resourceArray.length === 0) {
+        throw new Error("AI did not return a valid list of resources in JSON format.");
+    }
+
+    // Add source and validate types/categories
+    return resourceArray.map(res => ({
+        title: res.title,
+        description: res.description,
+        url: res.url,
+        type: res.type || 'other', // Default if AI misses
+        category: res.category || 'other', // Default if AI misses
+        source: 'AI_suggested',
+    }));
+
+  } catch (error) {
+    console.error('Error generating learning resources with OpenAI:', error.message);
+    if (error.response && error.response.data && error.response.data.error) {
+        console.error('OpenAI API Error details:', error.response.data.error);
+    }
+    throw new Error('Failed to generate AI learning resources. Please check server logs and OpenAI API key/usage limits. Ensure the AI output is valid JSON.');
+  }
+};
+
+
 module.exports = {
   summarizeText,
   draftMessage,
@@ -296,4 +372,5 @@ module.exports = {
   getPersonalizedProductivityRecommendation,
   getPersonalizedGoalRecommendation,
   getWellnessSuggestion,
+  generateLearningResources,
 };

@@ -1,7 +1,7 @@
 const asyncHandler = require('../utils/asyncHandler');
 const LearningResource = require('../models/LearningResource');
 const { Types } = require('mongoose'); // Import Mongoose Types for ObjectId validation
-const { getMotivationalTip } = require('../services/aiService'); // Ensure this is implemented or mocked
+const { getMotivationalTip, generateLearningResources } = require('../services/aiService'); // --- UPDATED: Import generateLearningResources ---
 
 // --- Learning Resource CRUD ---
 
@@ -15,19 +15,13 @@ const getLearningResources = asyncHandler(async (req, res) => {
   if (type) query.type = type;
   if (category) query.category = category;
   if (tag) query.tags = { $in: [tag] };
-
-  // --- REFINED: More robust validation for relatedGoal query parameter ---
-  if (relatedGoal) {
-      if (Types.ObjectId.isValid(relatedGoal)) { // ONLY add to query if it's a valid ObjectId
-          query.relatedGoal = relatedGoal;
-      } else {
-          // If relatedGoal is provided but invalid, log it and proceed without filtering by it.
-          // This prevents Mongoose from trying to cast a bad string to ObjectId in the query.
-          console.warn(`[LearningResourceController] Invalid relatedGoal query parameter received: '${relatedGoal}'. Ignoring.`);
-      }
+  // --- IMPORTANT: Ensure relatedGoal is a valid ObjectId if present in query ---
+  if (relatedGoal && !Types.ObjectId.isValid(relatedGoal)) {
+      res.status(400);
+      throw new Error('Invalid relatedGoal ID format in query.');
   }
-  // --- END REFINED ---
-
+  if (relatedGoal) query.relatedGoal = relatedGoal;
+  // --- END IMPORTANT ---
   if (search) {
       query.$or = [
           { title: { $regex: search, $options: 'i' } },
@@ -78,11 +72,12 @@ const createLearningResource = asyncHandler(async (req, res) => {
       res.status(400);
       throw new Error('Please provide at least a title, URL, and type for the learning resource.');
   }
-  // Validate relatedGoal if present in body
+  // --- IMPORTANT: Validate relatedGoal if present in body ---
   if (req.body.relatedGoal && !Types.ObjectId.isValid(req.body.relatedGoal)) {
       res.status(400);
       throw new Error('Invalid relatedGoal ID format in request body.');
   }
+  // --- END IMPORTANT ---
 
   const resource = await LearningResource.create(req.body);
 
@@ -112,11 +107,12 @@ const updateLearningResource = asyncHandler(async (req, res) => {
 
   delete req.body.user;
 
-  // Validate relatedGoal if present in body for update
+  // --- IMPORTANT: Validate relatedGoal if present in body for update ---
   if (req.body.relatedGoal && !Types.ObjectId.isValid(req.body.relatedGoal)) {
       res.status(400);
       throw new Error('Invalid relatedGoal ID format in request body.');
   }
+  // --- END IMPORTANT ---
 
   resource = await LearningResource.findByIdAndUpdate(req.params.id, req.body, {
     new: true,
@@ -162,15 +158,12 @@ const deleteLearningResource = asyncHandler(async (req, res) => {
 // @route   GET /api/v1/coach/motivational-tip
 // @access  Private
 const getMotivationalTipController = asyncHandler(async (req, res) => {
-  const hardcodedTips = [
-    "Believe you can and you're halfway there.",
-    "The best way to predict the future is to create it.",
-    "Your only limit is your mind.",
-    "Success is not final, failure is not fatal: it is the courage to continue that counts.",
-    "The journey of a thousand miles begins with a single step."
-  ];
-  const tip = hardcodedTips[Math.floor(Math.random() * hardcodedTips.length)];
-
+  // We can pass user context from req.user to make the tip more personalized
+  const userContext = {
+      userName: req.user.name,
+      // You could fetch more data here, e.g., user's active goals, recent tasks
+  };
+  const tip = await getMotivationalTip(userContext); // --- UPDATED: Pass user context ---
 
   res.status(200).json({
     success: true,
@@ -182,6 +175,49 @@ const getMotivationalTipController = asyncHandler(async (req, res) => {
 });
 
 
+// --- NEW: AI-Powered Learning Resource Generation Controller ---
+
+// @desc    Generate learning resources using AI based on a topic/goal
+// @route   POST /api/v1/learning-resources/ai-generate
+// @access  Private
+const aiGenerateLearningResources = asyncHandler(async (req, res) => {
+  const { topic, typeHint, difficulty, relatedGoal } = req.body; // topic is required
+
+  if (!topic) {
+    res.status(400);
+    throw new Error('Please provide a topic or goal for AI resource generation.');
+  }
+
+  // Optional: Client-side validation for relatedGoal if provided
+  if (relatedGoal && !Types.ObjectId.isValid(relatedGoal)) {
+    res.status(400);
+    throw new Error('Invalid relatedGoal ID format in request body for AI generation.');
+  }
+
+  const aiSuggestions = await generateLearningResources(topic, typeHint, difficulty);
+
+  // You might want to save these suggestions to the DB immediately,
+  // or return them to the frontend for user review before saving.
+  // For now, let's return them. The frontend can then decide to save them.
+
+  // If you wanted to auto-save them (example):
+  // const savedResources = await Promise.all(aiSuggestions.map(async (suggestion) => {
+  //     return LearningResource.create({
+  //         ...suggestion,
+  //         user: req.user._id,
+  //         relatedGoal: relatedGoal || undefined,
+  //         // Additional fields as needed
+  //     });
+  // }));
+
+  res.status(200).json({
+    success: true,
+    message: 'AI generated learning resource suggestions.',
+    data: aiSuggestions,
+  });
+});
+
+
 module.exports = {
   getLearningResources,
   getLearningResource,
@@ -189,4 +225,5 @@ module.exports = {
   updateLearningResource,
   deleteLearningResource,
   getMotivationalTipController,
+  aiGenerateLearningResources, 
 };
