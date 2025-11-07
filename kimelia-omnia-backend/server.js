@@ -178,12 +178,14 @@ app.use('/api/v1/events', require('./routes/eventRoutes'));
 app.use('/api/v1/messages', require('./routes/messageRoutes'));
 app.use('/api/v1/admin', require('./routes/adminRoutes'));
 app.use('/api/v1/goals', require('./routes/goalRoutes'));
-app.use('/api/v1', require('./routes/learningResourceRoutes'));
+
+// --- CORRECTED LINES BELOW: Mount each at its specific sub-path ---
+app.use('/api/v1/learning-resources', require('./routes/learningResourceRoutes')); // CORRECTED
 app.use('/api/v1/projects', require('./routes/projectRoutes'));
 app.use('/api/v1/expenses', require('./routes/expenseRoutes'));
 app.use('/api/v1/budgets', require('./routes/budgetRoutes'));
-app.use('/api/v1', require('./routes/insightRoutes'));
-app.use('/api/v1', require('./routes/wellnessRoutes'));
+app.use('/api/v1/insights', require('./routes/insightRoutes'));     // CORRECTED
+app.use('/api/v1/wellness-records', require('./routes/wellnessRoutes')); // Assuming wellness routes start with /wellness-records or /wellness
 app.use('/api/v1/integrations', require('./routes/integrationRoutes'));
 
 
