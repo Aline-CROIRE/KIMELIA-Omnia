@@ -16,15 +16,17 @@ const getLearningResources = asyncHandler(async (req, res) => {
   if (category) query.category = category;
   if (tag) query.tags = { $in: [tag] };
 
-  // --- IMPORTANT: ONLY validate relatedGoal if present and if it needs to be an ObjectId ---
-  if (relatedGoal) { // Check if relatedGoal query param exists
-      if (!Types.ObjectId.isValid(relatedGoal)) { // Then validate its format
-          res.status(400);
-          throw new Error('Invalid relatedGoal ID format in query.');
+  // --- REFINED: More robust validation for relatedGoal query parameter ---
+  if (relatedGoal) {
+      if (Types.ObjectId.isValid(relatedGoal)) { // ONLY add to query if it's a valid ObjectId
+          query.relatedGoal = relatedGoal;
+      } else {
+          // If relatedGoal is provided but invalid, log it and proceed without filtering by it.
+          // This prevents Mongoose from trying to cast a bad string to ObjectId in the query.
+          console.warn(`[LearningResourceController] Invalid relatedGoal query parameter received: '${relatedGoal}'. Ignoring.`);
       }
-      query.relatedGoal = relatedGoal;
   }
-  // --- END IMPORTANT ---
+  // --- END REFINED ---
 
   if (search) {
       query.$or = [
@@ -46,12 +48,7 @@ const getLearningResources = asyncHandler(async (req, res) => {
 // @route   GET /api/v1/learning-resources/:id
 // @access  Private
 const getLearningResource = asyncHandler(async (req, res) => {
-  // Manual validation for ID, as this route explicitly takes an ID parameter
-  if (!Types.ObjectId.isValid(req.params.id)) {
-    res.status(400);
-    throw new Error('Invalid Learning Resource ID format.');
-  }
-
+  // NOTE: validateIdParam middleware handles req.params.id validation BEFORE this controller is hit
   const resource = await LearningResource.findById(req.params.id);
 
   if (!resource) {
@@ -100,12 +97,7 @@ const createLearningResource = asyncHandler(async (req, res) => {
 // @route   PUT /api/v1/learning-resources/:id
 // @access  Private
 const updateLearningResource = asyncHandler(async (req, res) => {
-  // Manual validation for ID, as this route explicitly takes an ID parameter
-  if (!Types.ObjectId.isValid(req.params.id)) {
-    res.status(400);
-    throw new Error('Invalid Learning Resource ID format.');
-  }
-
+  // NOTE: validateIdParam middleware handles req.params.id validation BEFORE this controller is hit
   let resource = await LearningResource.findById(req.params.id);
 
   if (!resource) {
@@ -142,12 +134,7 @@ const updateLearningResource = asyncHandler(async (req, res) => {
 // @route   DELETE /api/v1/learning-resources/:id
 // @access  Private
 const deleteLearningResource = asyncHandler(async (req, res) => {
-  // Manual validation for ID, as this route explicitly takes an ID parameter
-  if (!Types.ObjectId.isValid(req.params.id)) {
-    res.status(400);
-    throw new Error('Invalid Learning Resource ID format.');
-  }
-
+  // NOTE: validateIdParam middleware handles req.params.id validation BEFORE this controller is hit
   const resource = await LearningResource.findById(req.params.id);
 
   if (!resource) {
@@ -175,11 +162,6 @@ const deleteLearningResource = asyncHandler(async (req, res) => {
 // @route   GET /api/v1/coach/motivational-tip
 // @access  Private
 const getMotivationalTipController = asyncHandler(async (req, res) => {
-  // This needs an actual implementation for getMotivationalTip in aiService.js
-  // For now, it might be undefined or throw an error if aiService is not ready.
-  // Temporarily return a hardcoded tip to ensure this route doesn't crash if AI service is not set up.
-  // const tip = await getMotivationalTip(req.user._id); // Original line
-
   const hardcodedTips = [
     "Believe you can and you're halfway there.",
     "The best way to predict the future is to create it.",
