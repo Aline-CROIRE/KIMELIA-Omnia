@@ -2,21 +2,18 @@ import React from 'react';
 import { AuthProvider } from './src/context/AuthContext';
 import AppNavigator from './src/navigation/AppNavigator';
 
-// --- NEW IMPORTS FOR FONTS ---
+
 import { useFonts } from 'expo-font';
 import {
   Poppins_400Regular,
   Poppins_500Medium,
-  Poppins_600SemiBold, // Recommended for logo font or bolder primary
-  Poppins_700Bold,     // Recommended for main titles or bolder primary
+  Poppins_600SemiBold, 
+  Poppins_700Bold,      
 } from '@expo-google-fonts/poppins';
 import {
-  Lato_400Regular,     // Recommended for regular body text (secondary)
-  Lato_700Bold,        // Recommended for bolder secondary text
-} from '@expo-google-fonts/lato';
-// --- END NEW IMPORTS ---
+  Lato_400Regular,      
+  Lato_700Bold,         secondary text
 
-// Import necessary Styled Components for the loading screen
 import { LoadingIndicator, GradientBackground } from './src/components/StyledComponents';
 import { GRADIENTS } from './src/constants'; // Needed for GradientBackground colors
 
