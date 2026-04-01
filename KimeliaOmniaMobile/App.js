@@ -19,19 +19,19 @@ import { GRADIENTS } from './src/constants'; // Needed for GradientBackground co
 
 export default function App() {
   const [fontsLoaded] = useFonts({
-    // Poppins for primary and logo
+    p
     Poppins_400Regular,
     Poppins_500Medium,
     Poppins_600SemiBold,
     Poppins_700Bold,
 
-    // Lato for secondary body text
+   
     Lato_400Regular,
     Lato_700Bold,
   });
 
   if (!fontsLoaded) {
-    // Display a loading screen while fonts are loading
+    
     return (
       <GradientBackground colors={GRADIENTS.background}>
         <LoadingIndicator />
