@@ -1,4 +1,4 @@
-// src/components/KIMELIAOmniaLogo.jsx
+
 import React, { useRef } from 'react';
 import styled from 'styled-components';
 import { toPng } from 'html-to-image';
